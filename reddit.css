@@ -1,0 +1,88 @@
+
+/*a.bchtips, a.bchtips:visited { font-weight: bold !important; color:#4cca47 !important; }*/
+/*a.bchtip:hover { color:#4cca47 !important; }*/
+a.bchtip_err:hover { color:#ca4c47 !important; }
+.bchtip_div {
+	clear:left;
+	margin-top:10px;
+	margin-left:15px;
+	max-width:50em;
+	font-size:12px;
+	color:#222;
+	background-color:rgba(255,255,255,0.3);
+	border:1px solid #666;
+	border-radius:7px;
+	padding:8px;
+	overflow:hidden;
+}
+.bchtip_inside {
+	line-height:1.8em;
+}
+
+.bchtip_div_top {
+	margin-left:0;
+}
+.bchtip_line1 {
+	line-height:1.5em;
+	margin-bottom:0.4em;
+	margin-top:0.1em;
+}
+.bchtip_logo,.bchtip_load { height:24px; margin-right:10px; }
+.bchtip_warn { color:darkorange; }
+.bchtip_error { color:red; }
+a.bchtip_error { text-decoration:underline; }
+.bchtip_bal { font-weight:bold; }
+.bchtip_amt { text-align:right; width:100px; }
+.bchtip_unit { }
+.bchtip_send,.bchtip_send:hover {
+	all:unset;
+	padding: 1px 6px;
+	align-items: flex-start;
+	text-align: center;
+	cursor: default;
+	color: buttontext;
+	background-color: buttonface;
+	box-sizing: border-box;
+	border-width: 2px;
+	border-style: outset;
+	border-color: buttonface;
+	border-image: initial;
+	text-rendering: auto;
+	letter-spacing: normal;
+	word-spacing: normal;
+	text-transform: none;
+	text-indent: 0px;
+	text-shadow: none;
+	display: inline-block;
+	margin: 0em;
+	font: 400 13.3333px Arial;
+	-webkit-writing-mode: horizontal-tb;
+	-webkit-appearance: button;
+}
+.bchtip_send:hover {
+	/*background-color:#4cca47;*/
+}
+a.bchtip_areply,a.bchtip_areply:visited,
+a.bchtip_sendpm,a.bchtip_sendpm:visited { color:#4c47ca !important; }
+.bchtip_replytxt {
+	width:100%;
+	overflow:hidden;
+}
+.bchtip_expand {
+  overflow:hidden;
+  transition:max-height 0.5s ease-out;
+  height:auto;
+  max-height:250px;
+}
+.bchtip_expand.bchtip_collapse {
+  max-height:0;
+}
+.bchtip_r_expand {
+  overflow:hidden;
+  transition:max-height 0.5s ease-out;
+  height:auto;
+  max-height:100px;
+}
+.bchtip_r_expand.bchtip_r_collapse {
+  max-height:0;
+}

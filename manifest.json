@@ -1,0 +1,27 @@
+{
+	"name": "BCH Tips",
+	"description": "Send Bitcoin Cash tips on social media easily and securely.",
+	"manifest_version": 2,
+	"version": "1.0",
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA13JoyxbnEmdv+T8Sh9wC79+tDQddvYHduGL5WgGr8zPptfgLdAetWrlCbVfhlYTjr3Crt7gjuKGqbkzdL7LLB3PiT+izASHozv6pHWCY5baTHIv4x6AQ5hjdvW5HqD7w+eBio6GtGgZnnmrctloTwuXgdkWjerQSAFMnCfXIDqhQypEtOqCh0FGkLn4HVr1/+bKzTtbC3eg+tzhhy72hi0BFgbg9NyPyS9gf0GLrTHiPp0QI+ihs3vVgnFt7Md8/pBfg2Av1Ak6qQOFTxhnizYzxHlsfaAPaY+jMryFE2eE7X8EShRUwQ8xXSQeN/NrkN4eROgWwZHkjfQRchdQY4QIDAQAB",
+	"icons": {
+		"128": "img/icon.png"
+	},
+	"browser_action": {
+		"default_icon": "img/icon.png",
+		"default_popup": "popup.html"
+	},
+	"permissions": [
+		"activeTab",
+		"storage",
+		"tabs",
+		"notifications",
+		"https://*.reddit.com/*",
+		"https://twitter.com/*"
+		],
+	"content_scripts": [{
+	"matches": ["https://*.reddit.com/*"],
+	"css": ["reddit.css"],
+	"js": ["lib/bchaddrjs-0.2.0.min.js","lib/bitcoincash-0.1.10.min.js","lib/chrome-Storage-largeSync.min.js","lib/lz-string.min.js","reddit.js"]
+	}]
+}

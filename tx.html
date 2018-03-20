@@ -1,0 +1,34 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Transactions - BCH Tips</title>
+<style type="text/css">
+	body {
+		margin: 10px;
+		font-size:18px;
+		text-align:center;
+	}
+	a,a:visited { color:#4cca47; text-decoration:none; }
+	a:hover { text-decoration:underline; }
+	h1 { margin:0 0 0.5em 0; font-size:28px; font-weight:bold; }
+	#banner { max-width:480px; margin-bottom:1em; }
+	#txq { margin-bottom:1em; }
+	table { margin:0 auto; }
+	th { font-weight:normal; text-decoration:underline; }
+	th,td { text-align:left; padding:0 15px 1px 0; }
+	body { margin-bottom:1em; }
+</style>
+<script src="tx.js"></script>
+<script src="lib/chrome-Storage-largeSync.min.js"></script>
+<script src="lib/lz-string.min.js"></script>
+</head>
+<body>
+<img id="banner" src="img/bchtips.png" /><br>
+<div id="body_wrap">
+<h1>Transaction Queue</h1>
+<div id="txq"><img src="img/loading.gif" height="28" width="28"></div>
+<h1>Transaction History</h1>
+<div id="txh"><img src="img/loading.gif" height="28" width="28"></div>
+</div>
+</body>
+</html>
