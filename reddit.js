@@ -94,20 +94,24 @@ function satToUnit(s,u){
 	else if(u=='usd') return bchtousd(satToUnit(s,'bch'));
 }
 
+function setAmtEst(id){
+	q=document.getElementById('bchtip_amt'+id).value;
+	if(!q || q==0 || isNaN(q)) document.getElementById('bchtip_amtest'+id).innerHTML='';
+	var u=document.getElementById('bchtip_unit'+id).value;
+	if(u=='bch') var est='$'+bchtousd(q)+' USD';
+	else if(u=='bit') var est='$'+bchtousd(satToUnit(unitToSat(q,'bit'),'bch'))+' USD';
+	else if(u=='sat') var est='$'+bchtousd(satToUnit(q,'bch'))+' USD';
+	else if(u=='usd') var est=usdtobch(q)+' BCH';
+	if(u=='all') document.getElementById('bchtip_amtest'+id).style.display='none';
+	else { document.getElementById('bchtip_amtest'+id).innerHTML=est; document.getElementById('bchtip_amtest'+id).style.display=''; }
+}
+
 function updateEstimate(id){
 	//console.log('updateEstimate('+id+')');
 	if(!document.getElementById('bchtip_loaded'+id)) return;
 	var q=document.getElementById('bchtip_globals').getAttribute('data-balance');
 	document.getElementById('bchtip_balest'+id).innerHTML='$'+bchtousd(q)+' USD';
-	q=document.getElementById('bchtip_amt'+id).value;
-	if(!q || q==0 || isNaN(q)) document.getElementById('bchtip_amtest'+id).innerHTML='';
-	var u=document.getElementById('bchtip_unit'+id).value;
-	if(u=='bch') var est='$'+bchtousd(q)+' USD';
-	else if(u=='all') var est='';
-	else if(u=='bit') var est='$'+bchtousd(satToUnit(unitToSat(q,'bit'),'bch'))+' USD';
-	else if(u=='sat') var est='$'+bchtousd(satToUnit(q,'bch'))+' USD';
-	else if(u=='usd') var est=usdtobch(q)+' BCH';
-	document.getElementById('bchtip_amtest'+id).innerHTML=est;
+	setAmtEst(id);
 	// got everything, show it
 	if(document.getElementById('bchtip_loading'+id).style.display==''){
 		document.getElementById('bchtip_loading'+id).style.display='none';
@@ -206,6 +210,7 @@ function updateTip(id){
 				return;
 			}
 			var fee=0;
+			var df=document.getElementById('bchtip_globals').getAttribute('data-fee');
 			var su=[]; // target source utxos
 			var si=0; // source index
 			// check utxos
@@ -228,15 +233,16 @@ function updateTip(id){
 					tx.change(bchaddr.toLegacyAddress(o.data.waddr)).sign(o.data.wkey);
 					//console.log('signedtoStringlen='+tx.toString().length);
 					//console.log('tx='); console.log(tx);
-					if(tx.toString().length/2>fee){
+					var fn=Math.ceil(tx.toString().length/2*df); // fee needed
+					if(fn>fee){
 						//console.log('fee '+fee+' not big enough.. setting to '+tx.toString().length/2);
-						fee=tx.toString().length/2;
+						fee=fn;
 						continue;
-					} else if(tx.toString().length/2<fee-1){ // -1 avoids loop
+					} else if(fn<fee-1){ // -1 avoids loop
 						if(document.getElementById('bchtip_unit'+id).value=='all'){
 							//console.log('fee '+fee+' too big, sending all, setting to '+tx.toString().length/2);
-							fee=tx.toString().length/2;
-							a=st-(tx.toString().length/2);
+							fee=fn;
+							a=st-fn;
 							document.getElementById('bchtip_amt'+id).value=toFixed(parseFloat(a/100000000),8);
 							continue;
 						} // todo: avoid "slightly overpaying fee" by adjusting here without causing/using loop - not easy due to 2 outputs after stepping off send all, change as fee, etc.
@@ -281,7 +287,7 @@ function updateTip(id){
 			if(tx && tx.outputs && tx.outputs.length>1 && tx.outputs[tx.outputs.length-1].satoshis<250){
 				if(!utxos[si+1]) var oa=' or All'; else var oa='';
 				document.getElementById('bchtip_feewarn'+id).innerHTML='<span class="bchtip_warn">Inefficient change ('+tx.outputs[tx.outputs.length-1].satoshis+' sat is <250). Consider sending more'+oa+'.</span><br>';
-			} else if(tx && fee-2 > tx.toString().length/2){
+			} else if(tx && fee-2 > fn){
 				document.getElementById('bchtip_feewarn'+id).innerHTML='<span class="bchtip_warn">Slightly overpaying fee.</span><br>';
 			} else document.getElementById('bchtip_feewarn'+id).innerHTML='';
 			if(noaddr) document.getElementById('bchtip_feewarn'+id).innerHTML+='This is just an estimate. Balance and fees at sending time will affect results.<br>';
@@ -299,7 +305,7 @@ function resetTipBox(id){
 	document.getElementById('bchtip_inside'+id).addEventListener('transitionend',func,false);
 	document.getElementById('bchtip_inside'+id).classList.add('bchtip_collapse');
 }
-												
+
 // send tip clicked
 function sendTipClicked(d){
 	console.log('bchtips sendTipClicked()');
@@ -324,7 +330,8 @@ function sendTipClicked(d){
 			if(dorate){ // also do utxos
 				var x2=new XMLHttpRequest(); x2.open("GET","https://bchftw.com/bchprice",true);
 				var x3=new XMLHttpRequest(); x3.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo",true);
-				var xs=[x0,x1,x2,x3];
+				var x4=new XMLHttpRequest(); x4.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
+				var xs=[x0,x1,x2,x3,x4];
 			} else var xs=[x0,x1];
 			onRequestsComplete(xs, function(xr, xerr){
 				for(let i=0;i<xs.length;i++){
@@ -339,6 +346,7 @@ function sendTipClicked(d){
 				console.log('x1='); console.log(x1);
 				if(dorate){ console.log('x2='); console.log(x2); } else console.log('x2 not loaded (!dorate)');
 				if(dorate){ console.log('x3='); console.log(x3); } else console.log('x3 not loaded (!dorate)');
+				if(dorate){ console.log('x4='); console.log(x4); } else console.log('x4 not loaded (!dorate)');
 				var uaddr='';
 				var e=document.createElement('html');
 				e.innerHTML=x0.responseText;
@@ -365,6 +373,15 @@ function sendTipClicked(d){
 						return;
 					}
 					parseUtxos(x3.responseText,1); // also calcs balance, 1=dont update all open tips
+					if(!x4.responseText || !x4.responseText[2] || isNaN(x4.responseText[2])){
+						document.getElementById('bchtip_div'+id).innerHTML+='<span class="bchtip_error"> Error getting fee estimate</span><br>';
+						console.log('bchtips_estimate_error x[4] response='); console.log(x4.responseText);
+						return;
+					}
+					var f=JSON.parse(x4.responseText)["2"];
+					var f=Math.ceil(f*10000000)/100; // round up to nearest 10 sat/kb
+					console.log('fee estimate='+f+' sat/B');
+					document.getElementById('bchtip_globals').setAttribute('data-fee',f);
 				}
 				if(document.getElementsByClassName('usertext cloneable warn-on-unload').length==0) document.getElementById('bchtip_div'+id).setAttribute('data-noreply',1); // reply not avail
 				var bal=document.getElementById('bchtip_globals').getAttribute('data-balance');
@@ -377,7 +394,7 @@ function sendTipClicked(d){
 					//var noall='';
 				} else {
 					if(document.getElementById('bchtip_globals').getAttribute('data-archived')||document.getElementById('bchtip_div'+id).getAttribute('data-noreply')) var t='message'; else var t='reply';
-					var line1=a+' doesn\'t have a known address. Your tip will be queued and sent automatically when they add one.';
+					var line1=a+' doesn\'t have a known address. Your tip will be sent automatically when they add one.';
 					var btntxt='Queue';
 					//var noall=1;
 				}
@@ -405,11 +422,13 @@ function sendTipClicked(d){
 						document.getElementById('bchtip_amt'+this.getAttribute('data-id')).value=document.getElementById('bchtip_globals').getAttribute('data-balance');
 						document.getElementById('bchtip_amt'+this.getAttribute('data-id')).disabled=true;
 					} else {
+						document.getElementById('bchtip_amtest'+this.getAttribute('data-id')).style.display='';
 						document.getElementById('bchtip_amt'+this.getAttribute('data-id')).disabled=false;
 						document.getElementById('bchtip_amt'+this.getAttribute('data-id')).value=satToUnit(getSatAmt(this.getAttribute('data-id'),document.getElementById('bchtip_unitlast'+this.getAttribute('data-id')).value),this.value);
 						document.getElementById('bchtip_amt'+this.getAttribute('data-id')).style.display='';
 						document.getElementById('bchtip_amt'+this.getAttribute('data-id')).select();
 					}
+					setAmtEst(this.getAttribute('data-id'));
 					document.getElementById('bchtip_unitlast'+this.getAttribute('data-id')).value=this.value;
 					var stepUSD='0.05';
 					if(this.value=='bch') document.getElementById('bchtip_amt'+this.getAttribute('data-id')).step=usdtobch(stepUSD);
@@ -436,14 +455,16 @@ function sendTipClicked(d){
 					var id=this.getAttribute('data-id');
 					var a=getSatAmt(id);
 					var b=satToUnit(a,'bch');
-					var b=b+' BCH ($'+bchtousd(b)+' USD)';
+					var b1=b+' BCH ($'+bchtousd(b)+' USD)';
+					var b2=fixNum(parseFloat(b).toFixed(8))+' BCH ($'+bchtousd(b)+' USD)';
+					console.log('b1='+b1+' b2='+b2);
 					document.getElementById('bchtip_inwrap'+id).style.display='none';
 					var d=document.getElementById('bchtip'+id).getAttribute('data-tip');
 					d=d.split(';');
-					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')) document.getElementById('bchtip_inwrap2_'+id).innerHTML='Sent '+b+' to '+d[1]+'! '; else document.getElementById('bchtip_inwrap2_'+id).innerHTML='Queued '+b+' to '+d[1]+'! ';
+					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')) document.getElementById('bchtip_inwrap2_'+id).innerHTML='Sent '+b1+' to '+d[1]+'! '; else document.getElementById('bchtip_inwrap2_'+id).innerHTML='Queued '+b1+' to '+d[1]+'! ';
 					document.getElementById('bchtip_inwrap2_'+id).style.display='';
 					// set and expand suggested msg
-					showReplyText(b,id);
+					showReplyText(b1,id);
 					// send
 					chrome.storage.sync.set({'lastsend':{'amt':document.getElementById('bchtip_amt'+id).value,'unit':document.getElementById('bchtip_unit'+id).value}});
 					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
@@ -461,17 +482,15 @@ function sendTipClicked(d){
 										try { var r=JSON.parse(x.responseText); } catch(e) { document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error parsing response: '+x.responseText+'</span> '; console.log('error parsing response: '+x.responseText); }
 										console.log('r='); console.log(r);
 										setTimeout(function(){ updateUtxos(); },10000);
-										setTimeout(function(){
-											if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view&nbsp;tx</a>) ';
-											document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset&nbsp;tip&nbsp;box</a>)<br>';
-											document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
-										},5000);
+										if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view&nbsp;tx</a>) ';
+										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset&nbsp;tip&nbsp;box</a>)<br>';
+										document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
 										// add to tx_sent
 										if(r.txid){
 											chrome.storage.largeSync.get(['tx_sent','tx_queue'],function(o){
 												console.log('ls o='); console.log(o);
 												if(!o || !o.tx_sent){ o={}; o.tx_sent=[]; }
-												o.tx_sent.push([Date.now()/1000|0,b,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
+												o.tx_sent.push([Date.now()/1000|0,b2,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
 												if(o.tx_sent.length>250){ while(1){ o.tx_sent.shift(); if(o.tx_sent.length<=250) break; } }
 												chrome.storage.largeSync.set(o);
 											});
@@ -492,13 +511,14 @@ function sendTipClicked(d){
 						chrome.storage.largeSync.get(['tx_sent','tx_queue'],function(o){
 							console.log('ls o='); console.log(o);
 							if(!o || !o.tx_queue){ o={}; o.tx_queue=[]; }
-							o.tx_queue.push([Date.now()/1000|0,b,d[1],d[2],null,'r']); // 0=time 1=amt 2=user 3=url 4=null 5=site(r,t)
+							o.tx_queue.push([Date.now()/1000|0,b2,d[1],d[2],null,'r']); // 0=time 1=amt 2=user 3=url 4=null 5=site(r,t)
 							if(o.tx_queue.length>250){ while(1){ o.tx_queue.shift(); if(o.tx_queue.length<=250) break; } }
 							chrome.storage.largeSync.set(o);
 						});
-						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a target="_blank" class="bchtip" href="chrome-extension://mleibiipcjdjfagohibnlmaoppmfpemo/tx.html" data-id="'+id+'">view queue</a>) ';
+						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_viewq'+id+'" class="bchtip" href="javascript:;">view queue</a>) ';
 						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
-						document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
+						document.getElementById('bchtip_viewq'+id).addEventListener('click',function(){ window.open(chrome.extension.getURL("tx.html#queue")); });
+						document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ console.log('wtf'); resetTipBox(this.getAttribute('data-id')); });
 					}
 				});
 				// scroll to tip
@@ -509,7 +529,7 @@ function sendTipClicked(d){
 				}
 				updateTip(id);
 			});
-			x0.send(); x1.send(); if(dorate){ x2.send(); x3.send(); }
+			x0.send(); x1.send(); if(dorate){ x2.send(); x3.send(); x4.send(); }
 		} else alert('you must set an address first. click the extension icon in the toolbar'); // todo: make more graceful
 	});
 }

@@ -7,6 +7,7 @@
 - when click 'send tip' on a comment permalink parent post jump to the post page with hash #tip so can reply
 - use multi-ajax to run updateRate and updateUtxos at same time
 - change 'send tip' link to 'cancel tip' when open, also cancel reply if empty when cancel
+- only query bchtips database if address not found in profile
 
 ## popup.js
 - change 'Fund your address' to standard message when just have unconfirmed balance because tipping works with unconfirmed utxos (barring reorg)
