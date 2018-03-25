@@ -562,7 +562,7 @@ function updateRate(){
 		//console.log('o='); console.log(o);
 		var now=Date.now();
 		if(o.rate_last_time && now-o.rate_last_time<20900){ // <21s
-			console.log('not time to update rate, stored rate='+o.rate_last_vaue);
+			console.log('not time to update rate, stored rate='+o.rate_last_value);
 			document.getElementById('bchtip_globals').setAttribute('data-rate',o.rate_last_value);
 		} else {
 			chrome.storage.sync.set({'rate_last_time':Date.now()});
@@ -571,6 +571,7 @@ function updateRate(){
 			x.onreadystatechange=function(){
 				if(x.readyState==4){
 					if(x.status==200){
+						x.responseText=x.responseText.trim();
 						console.log('rate='+x.responseText);
 						if(x.responseText){
 							if(!isNaN(x.responseText)){
@@ -640,6 +641,8 @@ function parseUtxos(r,n){ // n=dont update all balances, used when first tip ope
 }
 
 // init
+var lastfoc=0;
+var blurred='';
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 	var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/ // index pages
@@ -654,8 +657,19 @@ function afterDOMLoaded(){
 	addTipLinks(document);
 	if(window.location.hash=='#tip') document.getElementById('bchtip0').click();
 	setInterval(function(){
-		if(document.getElementsByClassName('bchtip_div').length===0) return; // skip if no tips open
-		updateRate(); // todo: sync/combine these (or keep using delay)
+		if(document.getElementsByClassName('bchtip_div').length===0 || blurred) return; // skip if no tips open
+		updateRate();
 		setTimeout(function(){ updateUtxos(); },2000);
 	}, 21000);
+	window.addEventListener('focus',function(){
+		if(Date.now()-lastfoc>=5000 && document.getElementsByClassName('bchtip_div').length!==0){
+			updateRate();
+			setTimeout(function(){ updateUtxos(); },2000);
+		}
+		lastfoc=Date.now();
+		blurred='';
+	});
+	window.addEventListener('blur',function(){
+		blurred=1;
+	});
 }

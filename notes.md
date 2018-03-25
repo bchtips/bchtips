@@ -1,5 +1,4 @@
 ## reddit.js
-- pause interval updates when tab not focused, resume immediately on focus
 - set tip amount box, unit select, reply textarea to browser default like Send button, make sure tip box looks good on variety of subreddit styles
 - use multi-ajax to run updateRate and updateUtxos at same time
 - cancel reply if empty when cancel tip
@@ -13,6 +12,7 @@
 ## options page (todo)
 - automatically append suggested text to reply, if available (no automatic pms due to captcha?)
 - automatically submit comment reply
+- add txid to reply or pm
 - notifications enabled
 - notification persistence
 - text to speech or sounds (custom?) enabled

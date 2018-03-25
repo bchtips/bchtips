@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					console.log(o);
 				});
 
-				document.body.innerHTML+='<br><div id="waddr_wrap">'+waddr+'<br><span id="waddrqr"></span></span><span id="wleg_wrap">'+wleg+'<br><span id="wlegqr"></span></div><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
+				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr"></span></span><span id="wleg_wrap">'+wleg+'<br><span id="wlegqr"></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
 				//document.body.innerHTML+='Key:<br>'+obj.data.wkey+'<br><br>';
 				document.body.innerHTML+='Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd"></div><span id="wbalu"></span><span id="wbalu_usd"></span><br><span id="status"></span><br><br>';
 				
