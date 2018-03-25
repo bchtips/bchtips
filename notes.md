@@ -23,9 +23,10 @@
 
 ## misc
 - get and sync feerate globally only every 60s
+- firefox, opera and other browser support
 
 ## minor improvements / may not implement
-- disable queueing 'all' funds because test address signature and actual signature size can be off by one sat (insufficient funds on final send)
+- disable queuing 'all' funds because test address signature and actual signature size can be off by one sat (insufficient funds on final send)
 - only query bchtips database if address not found in profile (takes longer and makes code bigger and we cache with cloudflare anyway)
 - animation on tip b̶o̶x̶ ̶o̶p̶e̶n̶i̶n̶g̶ ̶a̶n̶d̶ closing, removed queued tips, popup changes, etc.
 - notification of wallet fundings (though could be good for notification of received tips)
@@ -38,4 +39,4 @@
 - add link to tx explorer to suggested message after send. privacy implication: everyone knows your balance.. not implementing for that reason. consider mixing option?
 - update added reply text automatically when rate changes, replace last with current. make sure cursor doesn't screw up if currently typing.
   - allow user to edit and save suggested message. use templating for dynamic data
-- allow queueing tips even if insufficient funds?
+- allow queuing tips even if insufficient funds?
