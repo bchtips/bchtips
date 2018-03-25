@@ -3,11 +3,11 @@
 // 14s between requests to profile page and bchtips database
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
-	chrome.alarms.clear('txq'); // test
+	//chrome.alarms.clear('txq'); // test
 	chrome.alarms.get('txq',function(a){
 		if(a) return;
 		console.log('creating alarm');
-		chrome.alarms.create('txq',{periodInMinutes:1});
+		chrome.alarms.create('txq',{periodInMinutes:60});
 	});
 	// check if running elsewhere
 	function txqInit(){
@@ -32,7 +32,7 @@ function afterDOMLoaded(){
 	chrome.alarms.onAlarm.addListener(function(a){ txqInit(); });
 	
 	// send all queued items
-	si='',serr=0,nl={};
+	var si='',serr=0,nl={};
 	function send(){
 		//console.log('send()');
 		if(!si) si=setInterval(function(){ send(); },14000);
@@ -52,13 +52,13 @@ function afterDOMLoaded(){
 					//console.log(o.tx_queue.length+' queued items to send. current='); console.log(o.tx_queue[0]);
 					// first, just get user address
 					var x0=new XMLHttpRequest(); x0.open("GET","https://www.reddit.com/user/"+o.tx_queue[0][2],true);
-					var x1=new XMLHttpRequest(); x1.open("GET","https://bchftw.com/bchuser?s=r&u="+o.tx_queue[0][2],true);
+					var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+o.tx_queue[0][2].toLowerCase()+".csv",true);
 					var xs0=[x0,x1];
 					onRequestsComplete(xs0, function(xr, xerr){
 						//console.log('xs0='); console.log(xs0);
 						// check for error
 						for(let i=0;i<xs0.length;i++){
-							if((xs0[i].status!==200 || xs0[i].responseText=='' || (i==0 && xs0[i].responseText.indexOf('user/'+o.tx_queue[0][2])===-1)) && !(i==0 && xs0[i].responseText.indexOf('u/'+o.tx_queue[0][2]+': page not found')>-1)){
+							if((xs0[i].status!==200 || (i!==1 && xs0[i].responseText=='') || (i==0 && xs0[i].responseText.indexOf('user/'+o.tx_queue[0][2])===-1)) && !(i==0 && xs0[i].responseText.indexOf('u/'+o.tx_queue[0][2]+': page not found')>-1)){
 								if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database';
 								console.log('error '+m+'. xs0='); console.log(xs0);
 								serr++;
@@ -76,13 +76,20 @@ function afterDOMLoaded(){
 						var e=document.createElement('html');
 						e.innerHTML=x0.responseText;
 						var d=e.getElementsByClassName("ProfileSidebar__description");
-						if(d.length>0){ // legacy profiles have no description or may be maintenance page
+						if(d.length>0){ // legacy profiles have no description
 							var d=e.getElementsByClassName("ProfileSidebar__description")[0].innerHTML;
 							d=d.replace('\\n','').split(' ');
 							for(i=d.length;i>=0;i--) try { if(bchaddr.isCashAddress(d[i])==true) uaddr=d[i].replace('bitcoincash:',''); } catch(e){}
 						}
 						// no addr from profile, check db response
-						if(!uaddr) if(x1.responseText.trim()!=='nf') uaddr=x1.responseText.trim();
+						if(!uaddr){
+							let ar=x1.responseText.split('\n').reduce(function(obj,str,index){
+								let part=str.split(',');
+								if(part[0] && part[1]) obj[part[0]]=part[1].trim();
+								return obj;
+							}, {});
+							if(ar[a]) uaddr=ar[a];
+						}
 						if(!uaddr){ console.log('no user address, abort'); return; }
 				
 						// got an address, get utxos and fee estimate
@@ -148,7 +155,6 @@ function afterDOMLoaded(){
 															nl[id]=['https://www.reddit.com'+o.tx_queue[0][3],'https://blockdozer.com/insight/tx/'+r.txid];
 															removeOldListeners();
 													});
-													// todo: buttons
 													chrome.notifications.onButtonClicked.addListener(function(ni,bi){
 															var url=nl[ni][bi];
 															//console.log('ni='+ni+' bi='+bi+' url='+url);
@@ -227,6 +233,6 @@ function removeOldListenersCB(cb){
 }
 function removeOldListeners(){
 	removeOldListenersCB(function(n){
-		for(var p in nl) if(nl.hasOwnProperty(p)) if(!n[p]){ console.log('deleting expired listener: '+p); delete nl[p]; }
+		for(var p in nl) if(nl.hasOwnProperty(p)) if(!n[p]) delete nl[p];
 	});
 }

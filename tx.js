@@ -1,5 +1,5 @@
 /* BCH Tips tx.js */
-function cancelQueued(d,i,u){
+function cancelQueued(d,i){
 	chrome.storage.largeSync.get(['tx_queue'],function(o){
 		for(var j=0;j<o.tx_queue.length;j++) if(o.tx_queue[j][0]==d){ if(!confirm('Are you sure you want to cancel this tip to '+o.tx_queue[j][2]+'?')) return; o.tx_queue.splice(j,1); break; }
 		chrome.storage.largeSync.set(o);
@@ -7,7 +7,7 @@ function cancelQueued(d,i,u){
 		if(o.tx_queue.length==0) document.getElementById('txq').innerHTML='No queued transactions';
 	});
 }
-function removeTx(d,i,u){
+function removeTx(d,i){
 	chrome.storage.largeSync.get(['tx_sent'],function(o){
 		for(var j=0;j<o.tx_sent.length;j++) if(o.tx_sent[j][0]==d){ if(!confirm('Are you sure you want to remove this transaction from history?')) return; o.tx_sent.splice(j,1); break; }
 		chrome.storage.largeSync.set(o);

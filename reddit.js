@@ -294,16 +294,16 @@ function sendTipClicked(d){
 	if(findAncestor(document.getElementById('bchtip'+id),'entry').getElementsByClassName('top-matter').length==1){
 		n.insertAdjacentHTML('beforeend','<div id="bchtip_div'+id+'" class="bchtip_div bchtip_div_top" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'" data-top="1"></div>');
 	} else n.insertAdjacentHTML('afterend','<div id="bchtip_div'+id+'" class="bchtip_div" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'"></div>'); // todo: get margin-left of child and match it on .bchtip_div
-	document.getElementById('bchtip_div'+id).innerHTML+='<img src="https://cdn.bchftw.com/bchtips.png" class="bchtip_logo"><span id="bchtip_loading'+id+'"><img class="bchtip_load" src="https://cdn.bchftw.com/bchload.gif" class="bchtip_load"></span><br>';
+	document.getElementById('bchtip_div'+id).innerHTML+='<img src="https://cdn.bchftw.com/bchtips/bchtips.png" class="bchtip_logo"><span id="bchtip_loading'+id+'"><img class="bchtip_load" src="https://cdn.bchftw.com/bchtips/bchload.gif" class="bchtip_load"></span><br>';
 	// load storage, then multi ajax
 	chrome.storage.sync.get(['data','lastsend'],function(o){
 		console.log('o='); console.log(o);
 		if(o.data && o.data.waddr){
 			var x0=new XMLHttpRequest(); x0.open("GET","https://www.reddit.com/user/"+a,true);
-			var x1=new XMLHttpRequest(); x1.open("GET","https://bchftw.com/bchuser?s=r&u="+a,true);
+			var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+a[0].toLowerCase()+".csv",true);
 			if(document.getElementsByClassName('bchtip_div').length==1) var dorate=1; else dorate=false; // only load rate+utxos on first tip open, else intervals running
 			if(dorate){ // also do utxos
-				var x2=new XMLHttpRequest(); x2.open("GET","https://bchftw.com/bchprice",true);
+				var x2=new XMLHttpRequest(); x2.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 				var x3=new XMLHttpRequest(); x3.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo",true);
 				var x4=new XMLHttpRequest(); x4.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
 				var xs=[x0,x1,x2,x3,x4];
@@ -311,7 +311,7 @@ function sendTipClicked(d){
 			onRequestsComplete(xs, function(xr, xerr){
 				console.log('xs='); console.log(xs);
 				for(let i=0;i<xs.length;i++){
-					if((xs[i].status!==200 || xs[i].responseText=='' || (i==0 && xs[i].responseText.indexOf('user/'+a)===-1)) && !(i==0 && xs[i].responseText.indexOf('u/'+a+': page not found')>-1)){
+					if((xs[i].status!==200 || (i!==1 && xs[i].responseText=='') || (i==0 && xs[i].responseText.indexOf('user/'+a)===-1)) && !(i==0 && xs[i].responseText.indexOf('u/'+a+': page not found')>-1)){
 						if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database'; else if(i==2) var m='getting BCH price'; else if(i==3) var m='checking utxos';
 						document.getElementById('bchtip_loading'+id).innerHTML='<span class="bchtip_error">Error '+m+'. <a class="bchtip_error" href="javascript:for(i=0;i<2;i++) document.getElementById(\'bchtip'+id+'\').click();">try again</a></span>';
 						console.log('error '+m);
@@ -322,13 +322,20 @@ function sendTipClicked(d){
 				var e=document.createElement('html');
 				e.innerHTML=x0.responseText;
 				var d=e.getElementsByClassName("ProfileSidebar__description");
-				if(d.length>0){ // legacy profiles have no description or may be maintenance page
+				if(d.length>0){ // legacy profiles have no description
 					var d=e.getElementsByClassName("ProfileSidebar__description")[0].innerHTML;
 					d=d.replace('\\n','').split(' ');
 					for(i=d.length;i>=0;i--) try { if(bchaddr.isCashAddress(d[i])==true) uaddr=d[i].replace('bitcoincash:',''); } catch(e){}
 				}
 				// no addr from profile, check db response
-				if(!uaddr) if(x1.responseText.trim()!=='nf') uaddr=x1.responseText.trim();
+				if(!uaddr){
+					let ar=x1.responseText.split('\n').reduce(function(obj,str,index){
+						let part=str.split(',');
+						if(part[0] && part[1]) obj[part[0]]=part[1].trim();
+						return obj;
+					}, {});
+					if(ar[a]) uaddr=ar[a];
+				}
 				// user addr found
 				if(uaddr) document.getElementById('bchtip_div'+id).setAttribute('data-hasaddr',1); // so showReplyText knows which string to use
 				if(dorate){
@@ -558,7 +565,7 @@ function updateRate(){
 		} else {
 			chrome.storage.sync.set({'rate_last_time':Date.now()});
 			var x=new XMLHttpRequest();
-			x.open("GET","https://bchftw.com/bchprice",true);
+			x.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 			x.onreadystatechange=function(){
 				if(x.readyState==4){
 					if(x.status==200){
