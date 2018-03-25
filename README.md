@@ -26,11 +26,11 @@ Each post and comment features a new "send tip" link in the toolbar. When clicke
 
 BCH Tips is on [Reddit](https://www.reddit.com/r/bchtips), [Twitter](https://twitter.com/bchtips), [GitHub](https://github.com/bchtips/bchtips/) and you can find the author on [FreeNode](https://webchat.freenode.net/) in #bitcoincash as dw1, repping Bitcoin Cash every day. (I now have op status to help keep a lid on any overly-abusive trolls - thanks freetrader!). You may also recognize me as [@BCHftw](https://twitter.com/BCHftw) and [/u/bch_ftw](https://www.reddit.com/r/bch_ftw). I love Bitcoin Cash and am a pretty laid back and thoughtful guy so don't be shy.
 
-**Support our work (We need it! Thank you!)**
+**Support our work (We need it! Thank you!!)**
 
 The extension is still under heavy development so be on the lookout for even more improvements in the near future!
 
-If you're running the extension you can tip us right from this post. Just click **send tip** in the link toolbar. To send Bitcoin Cash from any wallet or exchange use the addresses below:
+Your contributions mean a lot and will help ensure I can keep putting time into this. If you're running the extension now you can tip me right from [this post](https://www.reddit.com/r/bchtips/comments/7xwnqq/bch_tips_is_the_easiest_and_most_secure_bitcoin/#tip) - just click **send tip** in the link toolbar below. To send Bitcoin Cash from any wallet or exchange use the addresses below:
 
 bitcoincash:qp69m6kpwqt6jdczd848zmaw86dccsp3zum4xthc2g ([QR Code](https://chart.apis.google.com/chart?chs=300x300&cht=qr&choe=ISO-8859-1&chl=bitcoincash:qp69m6kpwqt6jdczd848zmaw86dccsp3zum4xthc2g))
 
