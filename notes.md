@@ -6,8 +6,6 @@
 - refresh open tabs when extension reloads so storage continues working
 
 ## popup.js
-- change 'Fund your address' to standard message when just have unconfirmed balance because tipping works with unconfirmed utxos (barring reorg)
-- also display balance in USD
 
 ## tx.js
 - enable site field when add more sites

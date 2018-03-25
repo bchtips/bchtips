@@ -3,8 +3,19 @@
 var waddr='';
 var wleg='';
 var sitestatus='';
-var fundstatus='Fund your address to start tipping!';
 
+function balDisplay(b,u,r){
+	document.getElementById('wbal').innerHTML=parseFloat(b).toFixed(8)+' BCH<br>';
+	if(b>0) document.getElementById('wbal_usd').innerHTML=' ($'+parseFloat(r*b).toFixed(2)+' USD)<br>';
+	if(u!=0){
+		if(u>0) var sign='+'; else var sign='';
+		document.getElementById('wbalu').innerHTML=sign+parseFloat(u).toFixed(8)+' BCH ';
+		if(u<0) uu=u*-1; else uu=u;
+		document.getElementById('wbalu_usd').innerHTML=' ($'+parseFloat(r*uu).toFixed(2)+' USD)<br>';
+	}
+	if((b==0 && u<=0) || b+u<=0) document.getElementById('status').innerHTML='Fund your address to start tipping!'; else document.getElementById('status').innerHTML=sitestatus;
+}
+		
 function updateBalance(){
 	// dont spam the api, just load from storage if popup opened too quickly
 	lu=localStorage.getItem('lastupdate');
@@ -12,45 +23,32 @@ function updateBalance(){
 	console.log('lu='+lu);
 	var now=Date.now() / 1000 | 0;
 	if(now-lu<10){
-		if(!isNaN(localStorage.getItem('lastbal') || localStorage.getItem('lastbal_un')!==0)){
-			console.log('lastbal='+localStorage.getItem('lastbal')+' lastbal_un='+localStorage.getItem('lastbal_un'));
-			document.getElementById('wbal').innerHTML=parseFloat(localStorage.getItem('lastbal')).toFixed(8)+' BCH<br>';
-			if(localStorage.getItem('lastbal_un')!=0){
-				if(localStorage.getItem('lastbal_un')>0) var sign='+'; else var sign='';
-				document.getElementById('wbal').innerHTML+='<div id="wbal_unc">'+sign+parseFloat(localStorage.getItem('lastbal_un')).toFixed(8)+' BCH (Unconfirmed)</div>';
-			}
-			if(localStorage.getItem('lastbal')==0) document.getElementById('status').innerHTML=fundstatus; else document.getElementById('status').innerHTML=sitestatus;
-		}
+		console.log('ls='); console.log(localStorage);
+		balDisplay(localStorage.getItem('lastbal'),localStorage.getItem('lastbalu'),localStorage.getItem('lastrate'));
 		return;
 	}
 	console.log('updating balance');
-	var xhr = new XMLHttpRequest();
-	//xhr.open("GET", "https://cashexplorer.bitcoin.com/api/addr/"+wleg, true);
-	xhr.open("GET", "https://blockdozer.com/insight-api/addr/"+waddr, true);
-	xhr.onreadystatechange = function(){
-		if(xhr.readyState == 4){
-			if(xhr.status == 200){
-				localStorage.setItem('lastupdate',now);
-				if(xhr.responseText){
-					var resp = JSON.parse(xhr.responseText);
-					if(!isNaN(resp.balance)){
-						//resp.balance=1;
-						localStorage.setItem('lastbal',resp.balance);
-						localStorage.setItem('lastbal_un',resp.unconfirmedBalance);
-						if(resp.unconfirmedBalance!==0) if(resp.unconfirmedBalance>0) var sign='+'; else var sign='';
-						document.getElementById('wbal').innerHTML=resp.balance.toFixed(8)+' BCH<br>';
-						if(resp.unconfirmedBalance!==0) document.getElementById('wbal').innerHTML+='<div id="wbal_unc">'+sign+resp.unconfirmedBalance.toFixed(8)+' BCH (Unconfirmed)</div>';
-						if(resp.balance==0) document.getElementById('status').innerHTML=fundstatus; else document.getElementById('status').innerHTML=sitestatus;
-						//	if(resp.balance>=0) document.getElementById('wbal').innerHTML+='<span id="wbal_usd">$'+resp.data[0].sum_value_unspent_usd+' USD</span><br>';
-					} else var balerr=1;
-				} else var balerr=1;
-			} else balerr=1;
+	var x0=new XMLHttpRequest(); x0.open("GET","https://blockdozer.com/insight-api/addr/"+waddr,true);
+	var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
+	var xs=[x0,x1];
+	onRequestsComplete(xs, function(xr, xerr){
+		try { var resp=JSON.parse(x0.responseText); } catch(e){}
+		var rate=x1.responseText.trim();
+		for(let i=0;i<xs.length;i++){
+			if(xs[i].status!==200 || xs[i].responseText=='' || isNaN(resp.balance) || isNaN(rate)){
+				if(i==0) var m='getting address balance'; else if(i==1) var m='getting BCH price';
+				document.getElementById('wbal').innerHTML='<span id="wbal_error">Error '+m+'.</span>';
+				console.log('error '+m+' xs='); console.log(xs);
+				return;
+			}
 		}
-		if(balerr){
-			document.getElementById('wbal').innerHTML='<span id="wbal_error">Error getting balance.</span><br>';
-		}
-	}
-	xhr.send();
+		localStorage.setItem('lastupdate',now);
+		localStorage.setItem('lastrate',rate);
+		localStorage.setItem('lastbal',resp.balance);
+		localStorage.setItem('lastbalu',resp.unconfirmedBalance);
+		balDisplay(resp.balance,resp.unconfirmedBalance,rate)
+	});
+	x0.send(); x1.send();
 }
 
 function footer(){
@@ -92,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		if(!error){
-			// check if on reddit, if not, gray icon & popup says "site not supported"
 			chrome.tabs.query({active:true,currentWindow:true},function(tabArr){
 				url=tabArr[0].url;
 				for(i=0;i<valid_site_urls.length;i++){
@@ -112,9 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
 					console.log(o);
 				});
 
-				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr"></span></span><span id="wleg_wrap">'+wleg+'<br><span id="wlegqr"></span></span><span id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></span><br><br>';
+				document.body.innerHTML+='<br><div id="waddr_wrap">'+waddr+'<br><span id="waddrqr"></span></span><span id="wleg_wrap">'+wleg+'<br><span id="wlegqr"></span></div><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
 				//document.body.innerHTML+='Key:<br>'+obj.data.wkey+'<br><br>';
-				document.body.innerHTML+='Balance:<br><span id="wbal">&nbsp;</span><br><span id="status"></span><br><br>';
+				document.body.innerHTML+='Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd"></div><span id="wbalu"></span><span id="wbalu_usd"></span><br><span id="status"></span><br><br>';
 				
 				footer();
 				// get balance on a loop
@@ -165,21 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
 						chrome.storage.sync.set({'data':{ waddr: '', wkey: '' }});
 						location.reload();
 					}
-				});
-				document.getElementById('tn').addEventListener('click',function(){
-					var m=new SpeechSynthesisUtterance('Tip sent');
-					speechSynthesis.speak(m);
-					var m=new SpeechSynthesisUtterance('Fund your wallet to send pending tips');
-					speechSynthesis.speak(m);
-					var m=new SpeechSynthesisUtterance('Wallet funded');
-					speechSynthesis.speak(m);
-					//var a=new Audio('snd/sent.mp3');
-					//a.play();
-					chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of 0.00001234 BCH ($14 USD) sent to JohnDoe on Reddit.','requireInteraction':true,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(){});
-					chrome.notifications.onButtonClicked.addListener(function(ni,bi){
-							console.log('ni='+ni+' bi='+bi);
-					});
-
 				});
 			});
 		} else {
