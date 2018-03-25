@@ -3,7 +3,7 @@
 // 14s between requests to profile page and bchtips database
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
-	//chrome.alarms.clear('txq'); // test
+	chrome.alarms.clear('txq'); // test
 	chrome.alarms.get('txq',function(a){
 		if(a) return;
 		console.log('creating alarm');

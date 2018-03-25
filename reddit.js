@@ -131,6 +131,7 @@ function showReplyText(b,id){
 	if(document.getElementById('bchtip_globals').getAttribute('data-archived')||document.getElementById('bchtip_div'+id).getAttribute('data-noreply')){
 		var rtext='Reply unavailable. ';
 		var rlink='';
+		t1=t2;
 	} else {
 		var rtext='';
 		var rlink='(<a id="bchtip_areply'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">add to reply</a>) ';
@@ -287,18 +288,19 @@ function sendTipClicked(d){
 	d=d.split(';');
 	id=d[0]; a=d[1]; u=d[2];
 	console.log('id='+id+' a='+a+' u='+u);
-	if(document.getElementsByClassName('logout').length==0){ document.getElementById('bchtip'+id).innerHTML='login to tip'; document.getElementById('bchtip'+id).classList.remove('bchtips'); document.getElementById('bchtip'+id).classList.add('bchtip_err'); return; }
-	if(document.getElementById('bchtip_globals').getAttribute('data-index')){ window.location=u+'#tip'; return; } // forward to post
-	if(document.getElementById('bchtip_div'+id)){ document.getElementById('bchtip_div'+id).outerHTML=''; return; }  // collapse if open
-	var n=findAncestor(document.getElementById('bchtip'+id),'entry');
-	if(findAncestor(document.getElementById('bchtip'+id),'entry').getElementsByClassName('top-matter').length==1){
-		n.insertAdjacentHTML('beforeend','<div id="bchtip_div'+id+'" class="bchtip_div bchtip_div_top" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'" data-top="1"></div>');
-	} else n.insertAdjacentHTML('afterend','<div id="bchtip_div'+id+'" class="bchtip_div" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'"></div>'); // todo: get margin-left of child and match it on .bchtip_div
-	document.getElementById('bchtip_div'+id).innerHTML+='<img src="https://cdn.bchftw.com/bchtips/bchtips.png" class="bchtip_logo"><span id="bchtip_loading'+id+'"><img class="bchtip_load" src="https://cdn.bchftw.com/bchtips/bchload.gif" class="bchtip_load"></span><br>';
 	// load storage, then multi ajax
 	chrome.storage.sync.get(['data','lastsend'],function(o){
 		console.log('o='); console.log(o);
+		if(document.getElementById('bchtip_div'+id)){ document.getElementById('bchtip_div'+id).outerHTML=''; document.getElementById('bchtip'+id).innerHTML='send tip'; return; }  // collapse if open
 		if(o.data && o.data.waddr){
+			if(document.getElementsByClassName('logout').length==0){ document.getElementById('bchtip'+id).innerHTML='login to tip'; document.getElementById('bchtip'+id).classList.remove('bchtips'); document.getElementById('bchtip'+id).classList.add('bchtip_err'); return; }
+			document.getElementById('bchtip'+id).innerHTML='cancel tip';
+			if(document.getElementById('bchtip_globals').getAttribute('data-index') || (id==0 && document.getElementsByClassName('infobar')[1] && document.getElementsByClassName('infobar')[1].innerHTML.indexOf("you are viewing a single comment's thread.")!==-1 && document.getElementsByClassName('usertext cloneable warn-on-unload').length>0 && document.getElementsByClassName('usertext cloneable warn-on-unload')[0].style.display==='none')){ window.location=u+'#tip'; return; } // forward to post
+			var n=findAncestor(document.getElementById('bchtip'+id),'entry');
+			if(findAncestor(document.getElementById('bchtip'+id),'entry').getElementsByClassName('top-matter').length==1){
+				n.insertAdjacentHTML('beforeend','<div id="bchtip_div'+id+'" class="bchtip_div bchtip_div_top" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'" data-top="1"></div>');
+			} else n.insertAdjacentHTML('afterend','<div id="bchtip_div'+id+'" class="bchtip_div" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'"></div>'); // todo: get margin-left of child and match it on .bchtip_div
+			document.getElementById('bchtip_div'+id).innerHTML+='<img src="https://cdn.bchftw.com/bchtips/bchtips.png" class="bchtip_logo"><span id="bchtip_loading'+id+'"><img class="bchtip_load" src="https://cdn.bchftw.com/bchtips/bchload.gif" class="bchtip_load"></span><br>';
 			var x0=new XMLHttpRequest(); x0.open("GET","https://www.reddit.com/user/"+a,true);
 			var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+a[0].toLowerCase()+".csv",true);
 			if(document.getElementsByClassName('bchtip_div').length==1) var dorate=1; else dorate=false; // only load rate+utxos on first tip open, else intervals running
@@ -507,7 +509,7 @@ function sendTipClicked(d){
 				updateTip(id);
 			});
 			x0.send(); x1.send(); if(dorate){ x2.send(); x3.send(); x4.send(); }
-		} else alert('you must set an address first. click the extension icon in the toolbar'); // todo: make more graceful
+		} else { document.getElementById('bchtip'+id).innerHTML='set wallet address'; document.getElementById('bchtip'+id).classList.remove('bchtips'); document.getElementById('bchtip'+id).classList.add('bchtip_err'); return; }
 	});
 }
 

@@ -1,7 +1,7 @@
 
 /*a.bchtips, a.bchtips:visited { font-weight: bold !important; color:#4cca47 !important; }*/
 /*a.bchtip:hover { color:#4cca47 !important; }*/
-a.bchtip_err:hover { color:#ca4c47 !important; }
+a.bchtip_err:hover { color:#d92626 !important; }
 .bchtip_div {
 	clear:left;
 	margin-top:10px;
