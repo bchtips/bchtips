@@ -8,6 +8,8 @@
 - use multi-ajax to run updateRate and updateUtxos at same time
 - change 'send tip' link to 'cancel tip' when open, also cancel reply if empty when cancel
 - only query bchtips database if address not found in profile
+- add an icon or note about past tips beside posts or comments that are in tx history, e.g. "you tipped _" in green instead of "send tip"
+- refresh open tabs when extension reloads so storage continues working
 
 ## popup.js
 - change 'Fund your address' to standard message when just have unconfirmed balance because tipping works with unconfirmed utxos (barring reorg)
@@ -15,8 +17,23 @@
 
 ## tx.js
 - enable site field when add more sites
+- remove from queue by stamp
+
+## options page (todo)
+- automatically append suggested text to reply, if available (no automatic pms due to captcha?)
+- automatically submit comment reply
+- notifications enabled
+- notification persistence
+- text to speech or sounds (custom?) enabled
+
+## event.js
+- don't run in incognito or in multi-browsers
+- send, remove from queue by stamp and update queue, no index needed tbh just use 0
+- notif buttons view in history? view on chain
+- lock sync just in case things take too long and overlap or multi browsers running
 
 ## misc
+- get and sync feerate globally only every 60s
 - animation on tip b̶o̶x̶ ̶o̶p̶e̶n̶i̶n̶g̶ ̶a̶n̶d̶ closing, removed queued tips, popup changes, etc.
 - detect tips that didn't go through because of chain reorg or other. check sent tips until X confirmations. auto re-send/queue
 

@@ -1,29 +1,4 @@
 /* BCH Tips tx.js */
-// multi sync ajax https://stackoverflow.com/a/34570288
-function requestsAreComplete(requests) {
-    return requests.every(function (request) {
-        return request.readyState == 4;
-    });
-}
-
-function unsuccessfulRequests(requests) {
-    var unsuccessful = requests.filter(function (request) {
-         return request.status != 200;
-    });
-    return unsuccessful.length ? unsuccessful : null;
-}
-
-function onRequestsComplete(requests, callback) {
-    function sharedCallback() {
-        if (requestsAreComplete(requests)) {
-            callback(requests, unsuccessfulRequests(requests));
-        }
-    }
-    requests.forEach(function (request) {
-        request.onreadystatechange = sharedCallback;
-    });
-}
-
 function findAncestor(el,cls){
     while((el=el.parentNode)&&!el.classList.contains(cls));
     return el;
@@ -334,19 +309,15 @@ function sendTipClicked(d){
 				var xs=[x0,x1,x2,x3,x4];
 			} else var xs=[x0,x1];
 			onRequestsComplete(xs, function(xr, xerr){
+				console.log('xs='); console.log(xs);
 				for(let i=0;i<xs.length;i++){
 					if((xs[i].status!==200 || xs[i].responseText=='' || (i==0 && xs[i].responseText.indexOf('user/'+a)===-1)) && !(i==0 && xs[i].responseText.indexOf('u/'+a+': page not found')>-1)){
 						if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database'; else if(i==2) var m='getting BCH price'; else if(i==3) var m='checking utxos';
 						document.getElementById('bchtip_loading'+id).innerHTML='<span class="bchtip_error">Error '+m+'. <a class="bchtip_error" href="javascript:for(i=0;i<2;i++) document.getElementById(\'bchtip'+id+'\').click();">try again</a></span>';
-						console.log('bchtips_error xs='); console.log(xs);
+						console.log('error '+m);
 						return;
 					}
 				}
-				console.log('x0='); console.log(x0);
-				console.log('x1='); console.log(x1);
-				if(dorate){ console.log('x2='); console.log(x2); } else console.log('x2 not loaded (!dorate)');
-				if(dorate){ console.log('x3='); console.log(x3); } else console.log('x3 not loaded (!dorate)');
-				if(dorate){ console.log('x4='); console.log(x4); } else console.log('x4 not loaded (!dorate)');
 				var uaddr='';
 				var e=document.createElement('html');
 				e.innerHTML=x0.responseText;
@@ -373,12 +344,12 @@ function sendTipClicked(d){
 						return;
 					}
 					parseUtxos(x3.responseText,1); // also calcs balance, 1=dont update all open tips
-					if(!x4.responseText || !x4.responseText[2] || isNaN(x4.responseText[2])){
+					try { var f=JSON.parse(x4.responseText)["2"]; } catch(e){}
+					if(!x4.responseText || isNaN(f)){
 						document.getElementById('bchtip_div'+id).innerHTML+='<span class="bchtip_error"> Error getting fee estimate</span><br>';
 						console.log('bchtips_estimate_error x[4] response='); console.log(x4.responseText);
 						return;
 					}
-					var f=JSON.parse(x4.responseText)["2"];
 					var f=Math.ceil(f*10000000)/100; // round up to nearest 10 sat/kb
 					console.log('fee estimate='+f+' sat/B');
 					document.getElementById('bchtip_globals').setAttribute('data-fee',f);
@@ -457,7 +428,6 @@ function sendTipClicked(d){
 					var b=satToUnit(a,'bch');
 					var b1=b+' BCH ($'+bchtousd(b)+' USD)';
 					var b2=fixNum(parseFloat(b).toFixed(8))+' BCH ($'+bchtousd(b)+' USD)';
-					console.log('b1='+b1+' b2='+b2);
 					document.getElementById('bchtip_inwrap'+id).style.display='none';
 					var d=document.getElementById('bchtip'+id).getAttribute('data-tip');
 					d=d.split(';');
@@ -482,15 +452,15 @@ function sendTipClicked(d){
 										try { var r=JSON.parse(x.responseText); } catch(e) { document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error parsing response: '+x.responseText+'</span> '; console.log('error parsing response: '+x.responseText); }
 										console.log('r='); console.log(r);
 										setTimeout(function(){ updateUtxos(); },10000);
-										if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view&nbsp;tx</a>) ';
-										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset&nbsp;tip&nbsp;box</a>)<br>';
+										if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view tx</a>) ';
+										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
 										document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
 										// add to tx_sent
 										if(r.txid){
-											chrome.storage.largeSync.get(['tx_sent','tx_queue'],function(o){
+											chrome.storage.largeSync.get(['tx_sent'],function(o){
 												console.log('ls o='); console.log(o);
 												if(!o || !o.tx_sent){ o={}; o.tx_sent=[]; }
-												o.tx_sent.push([Date.now()/1000|0,b2,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
+												o.tx_sent.push([Date.now(),b2,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
 												if(o.tx_sent.length>250){ while(1){ o.tx_sent.shift(); if(o.tx_sent.length<=250) break; } }
 												chrome.storage.largeSync.set(o);
 											});
@@ -508,17 +478,17 @@ function sendTipClicked(d){
 						x.send('rawtx='+tx);
 					} else { // queue
 						console.log('queuing..');
-						chrome.storage.largeSync.get(['tx_sent','tx_queue'],function(o){
+						chrome.storage.largeSync.get(['tx_queue'],function(o){
 							console.log('ls o='); console.log(o);
 							if(!o || !o.tx_queue){ o={}; o.tx_queue=[]; }
-							o.tx_queue.push([Date.now()/1000|0,b2,d[1],d[2],null,'r']); // 0=time 1=amt 2=user 3=url 4=null 5=site(r,t)
+							o.tx_queue.push([Date.now(),b2,d[1],d[2],null,'r']); // 0=time 1=amt 2=user 3=url 4=null 5=site(r,t)
 							if(o.tx_queue.length>250){ while(1){ o.tx_queue.shift(); if(o.tx_queue.length<=250) break; } }
 							chrome.storage.largeSync.set(o);
 						});
 						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_viewq'+id+'" class="bchtip" href="javascript:;">view queue</a>) ';
 						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
-						document.getElementById('bchtip_viewq'+id).addEventListener('click',function(){ window.open(chrome.extension.getURL("tx.html#queue")); });
-						document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ console.log('wtf'); resetTipBox(this.getAttribute('data-id')); });
+						document.getElementById('bchtip_viewq'+id).addEventListener('click',function(){ window.open(chrome.extension.getURL("tx.html")); });
+						document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
 					}
 				});
 				// scroll to tip
