@@ -294,8 +294,8 @@ function sendTipClicked(d){
 		if(document.getElementById('bchtip_div'+id)){ document.getElementById('bchtip_div'+id).outerHTML=''; document.getElementById('bchtip'+id).innerHTML='send tip'; return; }  // collapse if open
 		if(o.data && o.data.waddr){
 			if(document.getElementsByClassName('logout').length==0){ document.getElementById('bchtip'+id).innerHTML='login to tip'; document.getElementById('bchtip'+id).classList.remove('bchtips'); document.getElementById('bchtip'+id).classList.add('bchtip_err'); return; }
-			document.getElementById('bchtip'+id).innerHTML='cancel tip';
 			if(document.getElementById('bchtip_globals').getAttribute('data-index') || (id==0 && document.getElementsByClassName('infobar')[1] && document.getElementsByClassName('infobar')[1].innerHTML.indexOf("you are viewing a single comment's thread.")!==-1 && document.getElementsByClassName('usertext cloneable warn-on-unload').length>0 && document.getElementsByClassName('usertext cloneable warn-on-unload')[0].style.display==='none')){ window.location=u+'#tip'; return; } // forward to post
+			document.getElementById('bchtip'+id).innerHTML='cancel tip';
 			var n=findAncestor(document.getElementById('bchtip'+id),'entry');
 			if(findAncestor(document.getElementById('bchtip'+id),'entry').getElementsByClassName('top-matter').length==1){
 				n.insertAdjacentHTML('beforeend','<div id="bchtip_div'+id+'" class="bchtip_div bchtip_div_top" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'" data-top="1"></div>');

@@ -2,8 +2,7 @@
 	"name": "BCH Tips",
 	"description": "Send Bitcoin Cash tips on social media easily and securely.",
 	"manifest_version": 2,
-	"version": "1.0.0",
-	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA13JoyxbnEmdv+T8Sh9wC79+tDQddvYHduGL5WgGr8zPptfgLdAetWrlCbVfhlYTjr3Crt7gjuKGqbkzdL7LLB3PiT+izASHozv6pHWCY5baTHIv4x6AQ5hjdvW5HqD7w+eBio6GtGgZnnmrctloTwuXgdkWjerQSAFMnCfXIDqhQypEtOqCh0FGkLn4HVr1/+bKzTtbC3eg+tzhhy72hi0BFgbg9NyPyS9gf0GLrTHiPp0QI+ihs3vVgnFt7Md8/pBfg2Av1Ak6qQOFTxhnizYzxHlsfaAPaY+jMryFE2eE7X8EShRUwQ8xXSQeN/NrkN4eROgWwZHkjfQRchdQY4QIDAQAB",
+	"version": "1.0.1",
 	"icons": {
 		"128": "img/icon.png"
 	},
