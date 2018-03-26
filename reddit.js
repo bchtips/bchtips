@@ -112,7 +112,6 @@ function updateEstimate(id,bo){
 				document.getElementById('bchtip_amt'+id).select();
 			}
 			document.getElementById('bchtip_inside'+id).removeEventListener('transitionend',func);
-			console.log('done transition');
 		}
 		document.getElementById('bchtip_inside'+id).addEventListener('transitionend',func,false);
 		document.getElementById('bchtip_inside'+id).classList.remove('bchtip_collapse');
