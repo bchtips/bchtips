@@ -30,11 +30,9 @@
 - notification of wallet fundings (though could be good for notification of received tips)
 - add an icon or note about past tips beside posts or comments that are in tx history, e.g. "you tipped _" in green instead of "send tip"
 - detect maintenance page when reading user profile (now throws error)
-- make a non-index-based id for queue item cancellations to avoid race issue if tip is queued while queue is full and confirmation window open
-- calculate USD using current exchange rate on queued tips
+- calculate USD using current exchange rate on queued tips (seems to make sense that all queue/history keep the USD from queuing/sending time)
 - use available utxos to calculate balance in popup? (though kind of nice to have 2 types of balances..)
 - show BCH amount beside All unit dropdown? meh, balance is right there..
 - add link to tx explorer to suggested message after send. privacy implication: everyone knows your balance.. not implementing for that reason. consider mixing option?
-- update added reply text automatically when rate changes, replace last with current. make sure cursor doesn't screw up if currently typing.
-  - allow user to edit and save suggested message. use templating for dynamic data
+- allow user to edit and save suggested message. use templating for dynamic data
 - allow queuing tips even if insufficient funds?
