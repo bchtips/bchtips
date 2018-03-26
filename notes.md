@@ -17,6 +17,7 @@
 - text to speech or sounds (custom?) enabled
 
 ## event.js
+- dont set alarm until first tip queued
 
 ## misc
 - get and sync feerate globally only every 60s

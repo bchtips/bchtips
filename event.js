@@ -52,7 +52,7 @@ function afterDOMLoaded(){
 					//console.log(o.tx_queue.length+' queued items to send. current='); console.log(o.tx_queue[0]);
 					// first, just get user address
 					var x0=new XMLHttpRequest(); x0.open("GET","https://www.reddit.com/user/"+o.tx_queue[0][2],true);
-					var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+o.tx_queue[0][2].toLowerCase()+".csv",true);
+					var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+o.tx_queue[0][2][0].toLowerCase()+".csv",true);
 					var xs0=[x0,x1];
 					onRequestsComplete(xs0, function(xr, xerr){
 						//console.log('xs0='); console.log(xs0);
@@ -88,7 +88,7 @@ function afterDOMLoaded(){
 								if(part[0] && part[1]) obj[part[0]]=part[1].trim();
 								return obj;
 							}, {});
-							if(ar[a]) uaddr=ar[a];
+							if(ar[o.tx_queue[0][2]]) uaddr=ar[o.tx_queue[0][2]];
 						}
 						if(!uaddr){ console.log('no user address, abort'); return; }
 				
@@ -233,6 +233,7 @@ function removeOldListenersCB(cb){
 }
 function removeOldListeners(){
 	removeOldListenersCB(function(n){
+		if(!nl) return;
 		for(var p in nl) if(nl.hasOwnProperty(p)) if(!n[p]) delete nl[p];
 	});
 }
