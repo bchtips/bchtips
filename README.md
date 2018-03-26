@@ -32,7 +32,7 @@ BCH Tips is on [Reddit](https://www.reddit.com/r/bchtips), [Twitter](https://twi
 
 The extension is still under heavy development so be on the lookout for even more improvements in the near future!
 
-Your contributions mean a lot and will help ensure I can keep putting time into this. If you're running the extension now you can tip me right from [this post](https://www.reddit.com/r/bchtips/comments/7xwnqq/bch_tips_is_the_easiest_and_most_secure_bitcoin/#tip) - just click **send tip** in the link toolbar below. To send Bitcoin Cash from any wallet or exchange use the addresses below:
+Your contributions mean a lot and will help ensure I can keep putting time into this. If you're running the extension now you can tip me right from [this post](https://www.reddit.com/r/bchtips/comments/7xwnqq/bch_tips_is_the_easiest_and_most_secure_bitcoin/#tip) - just click **send tip** in the link toolbar below. To send Bitcoin Cash from any wallet or exchange use one of the following addresses:
 
 bitcoincash:qp69m6kpwqt6jdczd848zmaw86dccsp3zum4xthc2g ([QR Code](https://chart.apis.google.com/chart?chs=300x300&cht=qr&choe=ISO-8859-1&chl=bitcoincash:qp69m6kpwqt6jdczd848zmaw86dccsp3zum4xthc2g))
 
