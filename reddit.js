@@ -81,11 +81,12 @@ function setAmtEst(id){
 	else { document.getElementById('bchtip_amtest'+id).innerHTML=est; document.getElementById('bchtip_amtest'+id).style.display=''; }
 }
 
-function updateEstimate(id){
+function updateEstimate(id,bo){
 	//console.log('updateEstimate('+id+')');
 	if(!document.getElementById('bchtip_loaded'+id)) return;
 	var q=document.getElementById('bchtip_globals').getAttribute('data-balance');
 	document.getElementById('bchtip_balest'+id).innerHTML='$'+bchtousd(q)+' USD';
+	if(bo) return;
 	setAmtEst(id);
 	// got everything, show it
 	if(document.getElementById('bchtip_loading'+id).style.display==''){
@@ -163,7 +164,7 @@ function showReplyText(b,id){
 // simple utxo selection: iterate through and select utxos until we have enough for tip + fee at ~1 sat/B (signed tx string length/2)
 // first in chain of updates, updateEstimate calls from here
 function updateTip(id){
-	if(document.getElementById('bchtip_div'+id).getAttribute('data-sent')==1){ console.log('tip sent, not running updateTip ('+id+')'); return; }
+	if(document.getElementById('bchtip_div'+id).getAttribute('data-sent')==1){ console.log('tip sent, not running updateTip ('+id+')'); updateEstimate(id,1); return; }
 	if(!document.getElementById('bchtip_loaded'+id)) return;
 	if(!document.getElementById('bchtip_uaddr'+id).value) var noaddr=1; else var noaddr='';
 	/*if(!document.getElementById('bchtip_amt'+id).value || isNaN(document.getElementById('bchtip_amt'+id).value)){
@@ -625,6 +626,7 @@ function parseUtxos(r,n){ // n=dont update all balances, used when first tip ope
 	for(i=0;i<utxos.length;i++) bal+=utxos[i].amount;
 	bal=toFixed(bal,8);
 	//console.log('balance='+bal);
+	document.getElementById('bchtip_globals').setAttribute('data-balance',bal);
 	// update all balances
 	if(!n){
 		var r=document.getElementsByClassName('bchtip_div');
@@ -638,7 +640,6 @@ function parseUtxos(r,n){ // n=dont update all balances, used when first tip ope
 			}
 		}
 	}
-	document.getElementById('bchtip_globals').setAttribute('data-balance',bal);
 }
 
 // init
