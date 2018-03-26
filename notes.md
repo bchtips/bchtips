@@ -1,6 +1,5 @@
 ## reddit.js
 - set tip amount box, unit select, reply textarea to browser default like Send button, make sure tip box looks good on variety of subreddit styles
-- use multi-ajax to run updateRate and updateUtxos at same time
 - cancel reply if empty when cancel tip
 - refresh open tabs when extension reloads so storage continues working
 
@@ -24,6 +23,8 @@
 - firefox, opera and other browser support
 
 ## minor improvements / may not implement
+- dont activate 'view tx' explorer link after send for a couple seconds so the tx is always in mempool when the user clicks
+- use multi-ajax to run updateRate and updateUtxos at same time (keeping the 2s offset allows for separate adjustment)
 - disable queuing 'all' funds because test address signature and actual signature size can be off by one sat (insufficient funds on final send)
 - only query bchtips database if address not found in profile (takes longer and makes code bigger and we cache with cloudflare anyway)
 - animation on tip b̶o̶x̶ ̶o̶p̶e̶n̶i̶n̶g̶ ̶a̶n̶d̶ closing, removed queued tips, popup changes, etc.
