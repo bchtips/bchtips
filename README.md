@@ -1,5 +1,7 @@
 BCH Tips is a browser extension for easy, trustless tipping with Bitcoin Cash on social media.
 
+[Download it on the Chrome web store](https://chrome.google.com/webstore/detail/bch-tips/idebkiaipjhbpehcbdlbldobffniiicg?authuser=3)
+
 **Features**
 
 * All tips on-chain and sent from your browser - no third party ever holds your funds.
