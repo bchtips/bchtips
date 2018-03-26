@@ -17,17 +17,14 @@ function balDisplay(b,u,r){
 }
 		
 function updateBalance(){
-	// dont spam the api, just load from storage if popup opened too quickly
+	// dont spam the api, just load from storage if opened too quickly
 	lu=localStorage.getItem('lastupdate');
 	if(!lu) lu=0;
-	console.log('lu='+lu);
-	var now=Date.now() / 1000 | 0;
+	var now=Date.now()/1000|0;
 	if(now-lu<10){
-		console.log('ls='); console.log(localStorage);
 		balDisplay(localStorage.getItem('lastbal'),localStorage.getItem('lastbalu'),localStorage.getItem('lastrate'));
 		return;
 	}
-	console.log('updating balance');
 	var x0=new XMLHttpRequest(); x0.open("GET","https://blockdozer.com/insight-api/addr/"+waddr,true);
 	var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 	var xs=[x0,x1];
@@ -96,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					var q=valid_site_urls[i];
 					if(url.substr(0,q.length)==q){
 						if(q.indexOf('reddit')!=-1){
-							sitestatus='Reddit tipping enabled.<br>Click <span class="greenbold">send tip</span> beneath a comment or post.';
+							sitestatus='<img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-16x16.png">  Reddit tipping enabled.<br>Click <span class="greenbold">send tip</span> beneath a comment or post.';
 							break;
 						} else if(q.indexOf('twitter')!=-1){
 							sitestatus='Twitter tipping enabled.<br>Click Tip beneath a tweet.';
@@ -109,19 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					console.log(o);
 				});
 
-				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr"></span></span><span id="wleg_wrap">'+wleg+'<br><span id="wlegqr"></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
+				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl=bitcoincash:'+waddr+'"><br></span></span><span id="wleg_wrap" style="display:none">'+wleg+'<br><span id="wlegqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+wleg+'"><br></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
 				//document.body.innerHTML+='Key:<br>'+obj.data.wkey+'<br><br>';
 				document.body.innerHTML+='Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd"></div><span id="wbalu"></span><span id="wbalu_usd"></span><br><span id="status"></span><br><br>';
 				
 				footer();
-				// get balance on a loop
 				updateBalance();
 				setInterval(updateBalance,15000);
-				// for some reason putting the click listener(s) before the if(site) html doesnt work
 				// init format
-				chrome.storage.sync.get('format',function(fob){
-					console.log('fob=');
-					console.log(fob);
+				chrome.storage.sync.get(['format','showqr'],function(fob){
 					if(!fob.format || fob.format=='c'){
 						document.getElementById('wleg_wrap').style.display='none';
 						document.getElementById('waddr_wrap').style.display='';
@@ -132,6 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
 						document.getElementById('wleg_wrap').style.display='';
 						document.getElementById('frm').innerHTML='CashAddr';
 					}
+					/*if(fob.showqr){
+						document.getElementById('waddrqr').style.display='';
+						document.getElementById('wlegqr').style.display='';
+						document.getElementById('sqr').innerHTML='Hide QR';
+					} else {
+						document.getElementById('waddrqr').style.display='none';
+						document.getElementById('wlegqr').style.display='none';
+						document.getElementById('sqr').innerHTML='Show QR';
+					}*/
 				});
 				document.getElementById('frm').addEventListener('click',function(){ // toggle format
 					if(document.getElementById('waddr_wrap').style.display=='none'){
@@ -147,14 +149,16 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				});
 				document.getElementById('sqr').addEventListener('click',function(){
-					if(document.getElementById('waddrqr').innerHTML===''){
-						document.getElementById('waddrqr').innerHTML='<img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+waddr+'"><br>';
-						document.getElementById('wlegqr').innerHTML='<img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+wleg+'"><br>';
+					if(document.getElementById('waddrqr').style.display=='none'){
+						document.getElementById('waddrqr').style.display='';
+						document.getElementById('wlegqr').style.display='';
 						document.getElementById('sqr').innerHTML='Hide QR';
+						//chrome.storage.sync.set({'showqr':1});
 					} else {
-						document.getElementById('waddrqr').innerHTML='';
-						document.getElementById('wlegqr').innerHTML='';
+						document.getElementById('waddrqr').style.display='none';
+						document.getElementById('wlegqr').style.display='none';
 						document.getElementById('sqr').innerHTML='Show QR';
+						//chrome.storage.sync.set({'showqr':''});
 					}
 				});
 				document.getElementById('rw').addEventListener('click',function(){

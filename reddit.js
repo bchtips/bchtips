@@ -163,7 +163,7 @@ function showReplyText(b,id){
 // simple utxo selection: iterate through and select utxos until we have enough for tip + fee at ~1 sat/B (signed tx string length/2)
 // first in chain of updates, updateEstimate calls from here
 function updateTip(id){
-	if(document.getElementById('bchtip_rlock'+id).value=='1'){ console.log('rlock, not running updateTip ('+id+')'); return; }
+	if(document.getElementById('bchtip_div'+id).getAttribute('data-sent')==1){ console.log('tip sent, not running updateTip ('+id+')'); return; }
 	if(!document.getElementById('bchtip_loaded'+id)) return;
 	if(!document.getElementById('bchtip_uaddr'+id).value) var noaddr=1; else var noaddr='';
 	/*if(!document.getElementById('bchtip_amt'+id).value || isNaN(document.getElementById('bchtip_amt'+id).value)){
@@ -378,7 +378,7 @@ function sendTipClicked(d){
 					var btntxt='Queue';
 					//var noall=1;
 				}
-				var html='<div id="bchtip_inside'+id+'" class="bchtip_inside bchtip_expand bchtip_collapse" data-id="'+id+'"><div class="bchtip_line1">'+line1+'</div>Balance: <span id="bchtip_bal'+id+'" class="bchtip_bal">'+bal+'</span> BCH (<span id="bchtip_balest'+id+'"></span>)<br><div id="bchtip_inwrap'+id+'">Tip: <input id="bchtip_amt'+id+'" class="bchtip_amt" type="number" step="any" min="0" size="10" data-id="'+id+'"> <select id="bchtip_unit'+id+'" data-id="'+id+'"><option value="bch">BCH<option value="bit">Bits<option value="sat">Satoshi<option value="usd">USD'; /*if(!noall)*/ html+='<option value="all">All'; html+='</select><input type="hidden" id="bchtip_unitlast'+id+'" value=""> <span id="bchtip_amtest'+id+'"></span> <span id="bchtip_fee'+id+'"></span> <button id="bchtip_send'+id+'" class="bchtip_send" data-id="'+id+'" disabled="disabled">'+btntxt+'</button><br><span id="bchtip_feewarn'+id+'"></span></div><div id="bchtip_inwrap2_'+id+'"></div><div id="bchtip_reply'+id+'" class="bchtip_r_expand bchtip_r_collapse" data-id="'+id+'"></div><input type="hidden" id="bchtip_rlock'+id+'" value=""><input type="hidden" id="bchtip_uaddr'+id+'" value="'+uaddr+'"><input id="bchtip_tx'+id+'" type="hidden" value=""><input id="bchtip_loaded'+id+'" type="hidden" value="1"></div></div>'; // todo:change hiddens to one element and use set/getattribute
+				var html='<div id="bchtip_inside'+id+'" class="bchtip_inside bchtip_expand bchtip_collapse" data-id="'+id+'"><div class="bchtip_line1">'+line1+'</div>Balance: <span id="bchtip_bal'+id+'" class="bchtip_bal">'+bal+'</span> BCH (<span id="bchtip_balest'+id+'"></span>)<br><div id="bchtip_inwrap'+id+'">Tip: <input id="bchtip_amt'+id+'" class="bchtip_amt" type="number" step="any" min="0" size="10" data-id="'+id+'"> <select id="bchtip_unit'+id+'" data-id="'+id+'"><option value="bch">BCH<option value="bit">Bits<option value="sat">Satoshi<option value="usd">USD'; /*if(!noall)*/ html+='<option value="all">All'; html+='</select><input type="hidden" id="bchtip_unitlast'+id+'" value=""> <span id="bchtip_amtest'+id+'"></span> <span id="bchtip_fee'+id+'"></span> <button id="bchtip_send'+id+'" class="bchtip_send" data-id="'+id+'" disabled="disabled">'+btntxt+'</button><br><span id="bchtip_feewarn'+id+'"></span></div><div id="bchtip_inwrap2_'+id+'"></div><div id="bchtip_reply'+id+'" class="bchtip_r_expand bchtip_r_collapse" data-id="'+id+'"></div><input type="hidden" id="bchtip_uaddr'+id+'" value="'+uaddr+'"><input id="bchtip_tx'+id+'" type="hidden" value=""><input id="bchtip_loaded'+id+'" type="hidden" value="1"></div></div>'; // todo:change hiddens to one element and use set/getattribute
 				document.getElementById('bchtip_div'+id).innerHTML+=html;
 				if(!o.lastsend || !o.lastsend.amt){ if(!o.lastsend) o.lastsend={}; o.lastsend.amt=0; }
 				if(!o.lastsend || !o.lastsend.unit) o.lastsend.unit='bch';
@@ -442,6 +442,7 @@ function sendTipClicked(d){
 					d=d.split(';');
 					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')) document.getElementById('bchtip_inwrap2_'+id).innerHTML='Sent '+b1+' to '+d[1]+'! '; else document.getElementById('bchtip_inwrap2_'+id).innerHTML='Queued '+b1+' to '+d[1]+'! ';
 					document.getElementById('bchtip_inwrap2_'+id).style.display='';
+					document.getElementById('bchtip_div'+id).setAttribute('data-sent',1);
 					// set and expand suggested msg
 					showReplyText(b1,id);
 					// send
@@ -561,7 +562,7 @@ function updateRate(){
 	chrome.storage.sync.get(['rate_last_time','rate_last_value'],function(o){
 		//console.log('o='); console.log(o);
 		var now=Date.now();
-		if(o.rate_last_time && now-o.rate_last_time<20900){ // <21s
+		if(o.rate_last_time && now-o.rate_last_time<20500){ // <21s
 			console.log('not time to update rate, stored rate='+o.rate_last_value);
 			document.getElementById('bchtip_globals').setAttribute('data-rate',o.rate_last_value);
 		} else {
