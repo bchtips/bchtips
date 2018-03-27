@@ -4,7 +4,8 @@
 - refresh open tabs when extension reloads so storage continues working
 
 ## popup.js
-
+- sync price/rate with that retrieved by reddit.js
+ 
 ## tx.js
 - enable site field when add more sites
 

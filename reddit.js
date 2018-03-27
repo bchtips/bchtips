@@ -622,8 +622,8 @@ function parseUtxos(r,n){ // n=dont update all balances, used when first tip ope
 	//console.log('utxos='); console.log(utxos);
 	// create balance out of available utxos
 	var bal=0;
-	for(i=0;i<utxos.length;i++) bal+=utxos[i].amount;
-	bal=toFixed(bal,8);
+	for(i=0;i<utxos.length;i++) bal+=utxos[i].satoshis;
+	bal=satToUnit(bal,'bch');
 	//console.log('balance='+bal);
 	document.getElementById('bchtip_globals').setAttribute('data-balance',bal);
 	// update all balances
