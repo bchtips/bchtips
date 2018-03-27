@@ -503,14 +503,14 @@ function addTipLinks(e){
 		var y=x[i].getElementsByTagName("li");
 		y=y[y.length-1];
 		if(!y) continue;
-		if(y.getElementsByTagName("a")[0].getAttribute("data-tip")) continue;
+		if(y.getElementsByTagName("a")[0] && y.getElementsByTagName("a")[0].getAttribute("data-tip")) continue;
 		var a=x[i].parentNode.parentNode.getElementsByClassName("author");
 		a=a[0].innerHTML;
 		if(a=='[deleted]') continue;
 		else if(a=='AutoModerator') continue;
 		u=x[i].getElementsByTagName("li")[0].getElementsByTagName("a")[0].getAttribute("data-href-url");
 		d=eid+';'+a+';'+u;
-		y.insertAdjacentHTML('afterend','<li><a id="bchtip'+eid+'" data-id="'+eid+'" data-tip="'+d+'" href="javascript:;">send tip</a>');
+		y.insertAdjacentHTML('afterend','<li><a class="bchtip_link" id="bchtip'+eid+'" data-id="'+eid+'" data-tip="'+d+'" href="javascript:;">send tip</a>');
 		y.nextSibling.getElementsByTagName("a")[0].addEventListener('click',function(){
 			sendTipClicked(this.getAttribute('data-tip'));
 			return false;

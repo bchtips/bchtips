@@ -1,8 +1,8 @@
 ## reddit.js
 - set tip amount box, unit select, reply textarea to browser default like Send button, make sure tip box looks good on variety of subreddit styles
 - cancel reply if empty when cancel tip
-- refresh open tabs when extension reloads so storage continues working
 - update step amount when rate changes
+- avoid page refresh necessity on install and upgrade
 
 ## popup.js
 - sync price/rate with that retrieved by reddit.js

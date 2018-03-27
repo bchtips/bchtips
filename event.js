@@ -1,9 +1,26 @@
 /* BCH Tips event.js */
+
+// refresh pages on install or upgrade
+chrome.runtime.onInstalled.addListener(function(details){
+	if(debug) console.log(details);
+	chrome.tabs.query({}, function(tabs){
+		if(debug) console.log(tabs);
+		if(details.reason=='install') var t='installed'; // todo: run all the scripts instead of showing popup
+		else if(details.reason=='update') var t='updated';
+		for(var i=0;i<tabs.length;i++){
+			if(tabs[i].url.indexOf('.reddit.com/')!==-1){
+			    chrome.tabs.executeScript(tabs[i].id,{ code: "var p1=/^https:\\/\\/(.*)\\.reddit\\.com\\/r\\/[^\\/]*\\/$/; var p2=/^https:\\/\\/(.*)\\.reddit\\.com\\/r\\/(.*)\\/comments\\/\(.*)/; if(p1.test('"+tabs[i].url+"'.split('?')[0])||p2.test('"+tabs[i].url+"')){ var html='<dialog id=\"dialog\" style=\"text-align:center; border-radius:10px; border-color:#222; color:#222;\"><form method=\"dialog\"><p style=\"font:22px verdana\">BCH Tips "+t+". Page refresh required. Do it now?</p><div style=\"font-size:14px\">(We\\'ll hopefully be able to remove this requirement soon.)</div><button type=submit value=yes>Yes</button> <button type=submit value=no autofocus>No</button></form></dialog>'; var x=document.createElement('div'); console.log(html); x.innerHTML=html; document.body.appendChild(x); var dialog = document.getElementById('dialog');dialog.showModal();dialog.addEventListener('close', function (event){ if (dialog.returnValue == 'yes') location.reload(); }); }" });
+			}
+		}
+	});
+});
+
 // tries to send up to 250 queued tips every 60m
 // 14s between requests to profile page and bchtips database
 var si='',serr=0,nl={},lastd=0;
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
+
 	// set alarm
 	chrome.alarms.clear('txq'); // test
 	chrome.alarms.get('txq',function(a){
@@ -50,7 +67,7 @@ function afterDOMLoaded(){
 				//if(debug){ console.log('ls o='); console.log(o); }
 				if(o && o.tx_queue && o.tx_queue.length>0){
 					//if(debug){ console.log('all items='); console.log(o.tx_queue);
-					// get next oldest item
+					// get next newest item
 					var found='';
 					for(var i=0;i<o.tx_queue.length;i++) if(o.tx_queue[i][0]>lastd){ found=1; var item=o.tx_queue[i]; lastd=item[0]; break; }
 					if(!found){
@@ -172,8 +189,8 @@ function afterDOMLoaded(){
 													});
 													// remove from tx_queue
 													chrome.storage.largeSync.get(['tx_queue'],function(oq){
-														for(var i=0;i<o.tx_queue.length;i++) if(o.tx_queue[i][0]==item[0]){
-															o.tx_queue.splice(i,1);
+														for(var i=0;i<oq.tx_queue.length;i++) if(oq.tx_queue[i][0]==item[0]){
+															oq.tx_queue.splice(i,1);
 															chrome.storage.largeSync.set(oq);
 															break;
 														}
