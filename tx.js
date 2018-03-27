@@ -1,27 +1,28 @@
 /* BCH Tips tx.js */
-function cancelQueued(d,i){
+function cancelQueued(d,u){
+	if(!confirm('Are you sure you want to cancel this tip to '+u+'?')) return;
 	chrome.storage.largeSync.get(['tx_queue'],function(o){
-		for(var j=0;j<o.tx_queue.length;j++) if(o.tx_queue[j][0]==d){ if(!confirm('Are you sure you want to cancel this tip to '+o.tx_queue[j][2]+'?')) return; o.tx_queue.splice(j,1); break; }
+		for(var j=0;j<o.tx_queue.length;j++) if(o.tx_queue[j][0]==d){ o.tx_queue.splice(j,1); break; }
 		chrome.storage.largeSync.set(o);
-		document.getElementById('txqr'+i).style.display='none';
-		if(o.tx_queue.length==0) document.getElementById('txq').innerHTML='No queued transactions';
+		refreshData();
 	});
 }
-function removeTx(d,i){
+/*function removeTx(d){
+	if(!confirm('Are you sure you want to remove this transaction from history?')) return;
 	chrome.storage.largeSync.get(['tx_sent'],function(o){
-		for(var j=0;j<o.tx_sent.length;j++) if(o.tx_sent[j][0]==d){ if(!confirm('Are you sure you want to remove this transaction from history?')) return; o.tx_sent.splice(j,1); break; }
+		for(var j=0;j<o.tx_sent.length;j++) if(o.tx_sent[j][0]==d){ o.tx_sent.splice(j,1); break; }
 		chrome.storage.largeSync.set(o);
-		document.getElementById('txhr'+i).style.display='none';
-		if(o.tx_sent.length==0) document.getElementById('txh').innerHTML='No sent transactions';
+		refreshData();
 	});
-}
+}*/
 
 function refreshData(){
-	console.log('refreshData()');
+	if(!document.hasFocus()) return;
+	if(debug) console.log('refreshData()');
 	lr=Date.now();
 	// queued tx
 	chrome.storage.largeSync.get(['tx_queue','tx_sent'],function(o){
-		console.log('o.tx_queue='); console.log(o.tx_queue);
+		if(debug){ console.log('o.tx_queue='); console.log(o.tx_queue); }
 		var html='';
 		if(o && o.tx_queue && o.tx_queue.length>0){
 			html+='<table border="0" cellspacing="0" cellpadding="0"><thead><tr><!--<th>Site</th>--><th>Date</th><th>Amount</th><th>User</th><th colspan="2"></th></tr></thead><tbody>';
@@ -39,19 +40,19 @@ function refreshData(){
 				+'<td>'+o.tx_queue[i][1]+'</td>'
 				+'<td><a target="_blank" href="https://www.reddit.com/user/'+o.tx_queue[i][2]+'">'+o.tx_queue[i][2]+'</a></td>'
 				+'<td><a target="_blank" href="https://www.reddit.com'+o.tx_queue[i][3]+'">View Post</a></td>'
-				+'<td><a id="c'+i+'" data-i='+i+' data-d="'+o.tx_queue[i][0]+'" href="#">Cancel</a></td>'
+				+'<td><a id="c'+i+'" data-d="'+o.tx_queue[i][0]+'" data-u="'+o.tx_queue[i][2]+'" href="#">Cancel</a></td>'
 				+'</tr>'; // todo: cancel
 				html+=row;
 			}
 			html+='</tbody></table>';
 			document.getElementById('txq').innerHTML=html;
-			for(var i=o.tx_queue.length-1;i>=0;i--) document.getElementById('c'+i).addEventListener('click', function(){ cancelQueued(this.getAttribute('data-d'),this.getAttribute('data-i')); });
+			for(var i=o.tx_queue.length-1;i>=0;i--) document.getElementById('c'+i).addEventListener('click', function(){ cancelQueued(this.getAttribute('data-d'),this.getAttribute('data-u')); });
 		} else {
 			document.getElementById('txq').innerHTML='No queued transactions';
 		}
 		
 		// sent tx
-		console.log('o.tx_sent='); console.log(o.tx_sent);
+		if(debug){ console.log('o.tx_sent='); console.log(o.tx_sent); }
 		html='';
 		if(o && o.tx_sent && o.tx_sent.length>0){
 			html+='<table border="0" cellspacing="0" cellpadding="0"><thead><tr><!--<th>Site</th>--><th>Date</th><th>Amount</th><th>User</th><th colspan="2"></th></tr></thead><tbody>';
@@ -75,7 +76,7 @@ function refreshData(){
 				html+=row;
 			}
 			html+='</tbody></table>';
-			//for(var i=o.tx_sent.length-1;i>=0;i--) document.getElementById('c'+i).addEventListener('click', function(){ removeTx(this.getAttribute('data-d'),this.getAttribute('data-i')); });
+			//for(var i=o.tx_sent.length-1;i>=0;i--) document.getElementById('c'+i).addEventListener('click', function(){ removeTx(this.getAttribute('data-d')); });
 			document.getElementById('txh').innerHTML=html;
 		} else {
 			document.getElementById('txh').innerHTML='No sent transactions';

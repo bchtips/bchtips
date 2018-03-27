@@ -1,3 +1,4 @@
+var debug='';
 // multi sync ajax https://stackoverflow.com/a/34570288
 function requestsAreComplete(requests) {
     return requests.every(function (request) {
@@ -24,7 +25,7 @@ function onRequestsComplete(requests, callback) {
 }
 
 function makeTx(utxos,waddr,wkey,toaddr,a,fr){
-		console.log('makeTx()');
+		if(debug) console.log('makeTx()');
 		//console.log('utxos='); console.log(utxos);
 		//console.log('waddr='+waddr+' wkey='+wkey+' toaddr='+toaddr+' a='+a+' fr='+fr);
 		utxos=JSON.parse(utxos);

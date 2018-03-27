@@ -35,7 +35,7 @@ function updateBalance(){
 			if(xs[i].status!==200 || xs[i].responseText=='' || isNaN(resp.balance) || isNaN(rate)){
 				if(i==0) var m='getting address balance'; else if(i==1) var m='getting BCH price';
 				document.getElementById('wbal').innerHTML='<span id="wbal_error">Error '+m+'.</span>';
-				console.log('error '+m+' xs='); console.log(xs);
+				if(debug){ console.log('error '+m+' xs='); console.log(xs); }
 				return;
 			}
 		}
@@ -55,12 +55,12 @@ function footer(){
 var valid_site_urls=['https://www.reddit.com'];//,'https://twitter.com/'];
 document.addEventListener('DOMContentLoaded', () => {
 	chrome.storage.sync.get('data',function(obj){
-		console.log(obj);
+		if(debug) console.log(obj);
 		if(!obj.data || (!obj.data.waddr && !obj.data.wkey)) var error='first'; // no error message
 		if(!error && !obj.data.waddr) var error='noaddr';
 		if(!error && !obj.data.wkey) var error='nokey';
 		if(!error){
-			console.log('testing addr');
+			if(debug) console.log('testing addr');
 			try {
 				var isleg=bchaddr.isLegacyAddress(obj.data.waddr);
 				var iscash=bchaddr.isCashAddress(obj.data.waddr);
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if(!error) if(address!=wleg) var error='wrongkey';
 		// if not cashaddress, fix
 		if(isleg){
-			console.log('converting to cashaddr..');
+			if(debug) console.log('converting to cashaddr..');
 			obj.data.waddr=bchaddr.toCashAddress(obj.data.waddr).substr(12);
 			chrome.storage.sync.set({'data':{ waddr: obj.data.waddr, wkey: obj.data.wkey }});
 		}
@@ -102,9 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				}
 				if(!sitestatus) sitestatus='Browse to a supported site to start tipping!';
-				chrome.storage.sync.get('test',function(o){
-					console.log(o);
-				});
 
 				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl=bitcoincash:'+waddr+'"><br></span></span><span id="wleg_wrap" style="display:none">'+wleg+'<br><span id="wlegqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+wleg+'"><br></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
 				//document.body.innerHTML+='Key:<br>'+obj.data.wkey+'<br><br>';
@@ -170,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		} else {
 			// address entry page
-			console.log('error='+error);
+			if(debug) console.log('error='+error);
 			if(error!='first'){
 				if(obj.data.waddr) localStorage.setItem('waddr',obj.data.waddr);
 				if(obj.data.wkey) localStorage.setItem('wkey',obj.data.wkey);
