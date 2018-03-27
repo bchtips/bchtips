@@ -2,7 +2,7 @@
 	"name": "BCH Tips",
 	"description": "Send Bitcoin Cash tips on social media easily and securely.",
 	"manifest_version": 2,
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"icons": {
 		"128": "img/icon.png"
 	},
@@ -15,15 +15,16 @@
 		"tabs",
 		"alarms",
 		"notifications",
-		"https://*.reddit.com/*"		],
+		"https://*.reddit.com/*"
+	],
 	"content_scripts": [{
 	"matches": ["https://*.reddit.com/*"],
 	"css": ["reddit.css"],
-	"js": ["reddit.js","global.js","lib/bchaddrjs-0.2.0.min.js","lib/bitcoincash-0.1.10.min.js","lib/chrome-Storage-largeSync.min.js","lib/lz-string.min.js"]
+	"js": ["lib/bignumber.min.js","lib/bchaddrjs-0.2.0.min.js","lib/bitcoincash-0.1.10.min.js","lib/chrome-Storage-largeSync.min.js","lib/lz-string.min.js","global.js","reddit.js"]
 	}],
 	"web_accessible_resources": ["tx.html"],
 	"background": {
-		"scripts": ["event.js","global.js","lib/bchaddrjs-0.2.0.min.js","lib/bitcoincash-0.1.10.min.js","lib/chrome-Storage-largeSync.min.js","lib/lz-string.min.js"],
+		"scripts": ["lib/bignumber.min.js","lib/bchaddrjs-0.2.0.min.js","lib/bitcoincash-0.1.10.min.js","lib/chrome-Storage-largeSync.min.js","lib/lz-string.min.js","global.js","event.js"],
 		"persistent": false
 	}
 }

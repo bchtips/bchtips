@@ -4,28 +4,6 @@ function findAncestor(el,cls){
     return el;
 }
 
-function toFixed(n,f){
-    var r=new RegExp('^-?\\d+(?:\.\\d{0,'+(f||-1)+'})?');
-    return n.toString().match(r)[0];
-}
-function fixNum(x) {
-  if (Math.abs(x) < 1.0) {
-    var e = parseInt(x.toString().split('e-')[1]);
-    if (e) {
-        x *= Math.pow(10,e-1);
-        x = '0.' + (new Array(e)).join('0') + x.toString().substring(2);
-    }
-  } else {
-    var e = parseInt(x.toString().split('+')[1]);
-    if (e > 20) {
-        e -= 20;
-        x /= Math.pow(10,e);
-        x += (new Array(e+1)).join('0');
-    }
-  }
-  return x;
-}
-
 function midScroll(el){
 	const element = document.getElementById(el);
 	const elementRect = element.getBoundingClientRect();
@@ -36,12 +14,12 @@ function midScroll(el){
 
 function bchtousd(bch,rate){
 	if(!rate) rate=document.getElementById('bchtip_globals').getAttribute('data-rate');
-	return (bch*rate).toFixed(2); // round
+	return BigNumberUp(bch).times(rate).toFixed(2);
 }
 
 function usdtobch(usd,rate){
 	if(!rate) rate=document.getElementById('bchtip_globals').getAttribute('data-rate');
-	return toFixed(Math.floor((usd/rate)*100000000)/100000000,8);
+	return BigNumber(BigNumber(usd).div(rate).toFixed(8)).toFixed();
 }
 
 function getSatAmt(id,u){ // u for calc with unitlast
@@ -56,16 +34,18 @@ function getSatAmt(id,u){ // u for calc with unitlast
 }
 
 function unitToSat(a,u){
-	if(u=='bch' || u=='all') return Math.floor(a*100000000);
-	else if(u=='bit') return Math.floor(a*100);
-	else if(u=='sat') return Math.floor(a);
-	else if(u=='usd') return Math.floor((a/document.getElementById('bchtip_globals').getAttribute('data-rate'))*100000000);
+	if(!a) a=0;
+	if(u=='bch' || u=='all') return BigNumber(a).times(100000000).toFixed(0);
+	else if(u=='bit') return BigNumber(a).times(100).toFixed(0);
+	else if(u=='sat') return BigNumber(a).toFixed(0);
+	else if(u=='usd') return BigNumber(a).div(document.getElementById('bchtip_globals').getAttribute('data-rate')).times(100000000).toFixed(0);
 }
 
 function satToUnit(s,u){
-	if(u=='bch') return toFixed(fixNum(parseFloat(s*0.00000001)),8);
-	else if(u=='bit') return toFixed(parseFloat(s*0.01),0);
-	else if(u=='sat') return toFixed(parseFloat(s),0);
+	if(!s) s=0;
+	if(u=='bch') return BigNumber(BigNumber(s).div(100000000).toFixed(8)).toFixed();
+	else if(u=='bit') return BigNumber(s).times(0.01).toFixed(0);
+	else if(u=='sat') return BigNumber(s).toFixed(0);
 	else if(u=='usd') return bchtousd(satToUnit(s,'bch'));
 }
 
@@ -166,21 +146,22 @@ function updateTip(id){
 	if(document.getElementById('bchtip_div'+id).getAttribute('data-sent')==1){ console.log('tip sent, not running updateTip ('+id+')'); updateEstimate(id,1); return; }
 	if(!document.getElementById('bchtip_loaded'+id)) return;
 	if(!document.getElementById('bchtip_uaddr'+id).value) var noaddr=1; else var noaddr='';
-	/*if(!document.getElementById('bchtip_amt'+id).value || isNaN(document.getElementById('bchtip_amt'+id).value)){
-		document.getElementById('bchtip_fee'+id).innerHTML='';
-		updateEstimate(id);
-		return;
-	}*/
 	document.getElementById('bchtip_send'+id).disabled=true;
 	document.getElementById('bchtip_tx'+id).value='';
 	chrome.storage.sync.get(['data'],function(o){
 		if(o.data && o.data.waddr && o.data.wkey){
-			if(document.getElementById('bchtip_unit'+id).value=='all') var a=unitToSat(document.getElementById('bchtip_globals').getAttribute('data-balance'),'bch'); else var a=getSatAmt(id);
+			if(document.getElementById('bchtip_unit'+id).value=='all') var a=parseFloat(unitToSat(document.getElementById('bchtip_globals').getAttribute('data-balance'),'bch')); else var a=parseFloat(getSatAmt(id));
 			if(!a || a==0 || isNaN(a)){
 				//console.log('amount is 0. aborting');
 				document.getElementById('bchtip_send'+id).style.display='none';
 				if(document.getElementById('bchtip_unit'+id).value=='all') document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Fund wallet to tip</span>';
 				else document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Enter amount to tip</span>';
+				document.getElementById('bchtip_feewarn'+id).innerHTML='';
+				updateEstimate(id);
+				return;
+			} else if(!utxos || utxos.length==0){
+				document.getElementById('bchtip_send'+id).style.display='none';
+				document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Insufficient funds</span>';
 				document.getElementById('bchtip_feewarn'+id).innerHTML='';
 				updateEstimate(id);
 				return;
@@ -216,10 +197,10 @@ function updateTip(id){
 						continue;
 					} else if(fn<fee-1){ // -1 avoids loop
 						if(document.getElementById('bchtip_unit'+id).value=='all'){
-							//console.log('fee '+fee+' too big, sending all, setting to '+tx.toString().length/2);
+							console.log('fee '+fee+' too big, sending all, setting to '+tx.toString().length/2);
 							fee=fn;
 							a=st-fn;
-							document.getElementById('bchtip_amt'+id).value=toFixed(parseFloat(a/100000000),8);
+							document.getElementById('bchtip_amt'+id).value=BigNumber(a).div(100000000).toFixed(8);
 							continue;
 						} // todo: avoid "slightly overpaying fee" by adjusting here without causing/using loop - not easy due to 2 outputs after stepping off send all, change as fee, etc.
 					}
@@ -228,13 +209,13 @@ function updateTip(id){
 					var us=[];
 					for(i=0;i<=si;i++) us.push(utxos[i].txid);
 					document.getElementById('bchtip_tx'+id).value=tx.toString();
-					console.log('to send: '+a+' + '+fee+' fee = '+t+'. within source utxo: '+st+'. good to send. tx='); console.log(tx);
+					console.log(a+' + '+fee+' fee = '+t+'. within source utxo: '+st+'. good to send.');
 				} else {
 					if(document.getElementById('bchtip_unit'+id).value=='all' && si==su.length-1 && fee>0){
 						// reduce amount
 						//console.log('amount too big, sending all, set to st - fee');
 						a=st-fee;
-						document.getElementById('bchtip_amt'+id).value=toFixed(parseFloat(a/100000000),8);
+						document.getElementById('bchtip_amt'+id).value=BigNumber(a).div(100000000).toFixed(8);
 						continue;
 					}
 					// use change as fee
@@ -366,7 +347,7 @@ function sendTipClicked(d){
 				if(document.getElementsByClassName('usertext cloneable warn-on-unload').length==0) document.getElementById('bchtip_div'+id).setAttribute('data-noreply',1); // reply not avail
 				var bal=document.getElementById('bchtip_globals').getAttribute('data-balance');
 				// output
-				console.log('uaddr='+uaddr+' balance='+bal+'rate='+document.getElementById('bchtip_globals').getAttribute('data-rate'));
+				//console.log('uaddr='+uaddr+' balance='+bal+' rate='+document.getElementById('bchtip_globals').getAttribute('data-rate'));
 				if(a[a.length-1]=='s') var ss="'"; else var ss="'s";
 				if(uaddr){
 					var line1=a+ss+' address: '+uaddr;
@@ -424,10 +405,10 @@ function sendTipClicked(d){
 				});
 				document.getElementById('bchtip_amt'+id).addEventListener('click', function(){
 					if((this.value>this.getAttribute('data-last') || this.value<this.getAttribute('data-last')) && this.value>0){
-						if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='bch') this.value=parseFloat(this.value).toFixed(8);
-						else if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='bit') this.value=parseFloat(this.value).toFixed(0);
-						else if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='sat') this.value=parseFloat(this.value).toFixed(0);
-						else if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='usd') this.value=parseFloat(this.value).toFixed(2);
+						if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='bch') this.value=BigNumber(this.value).toFixed(8);
+						else if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='bit') this.value=BigNumber(this.value).toFixed(0);
+						else if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='sat') this.value=BigNumber(this.value).toFixed(0);
+						else if(document.getElementById('bchtip_unit'+this.getAttribute('data-id')).value=='usd') this.value=BigNumber(this.value).toFixed(2);
 					}
 					updateTip(this.getAttribute('data-id'));
 				});
@@ -436,7 +417,7 @@ function sendTipClicked(d){
 					var a=getSatAmt(id);
 					var b=satToUnit(a,'bch');
 					var b1=b+' BCH ($'+bchtousd(b)+' USD)';
-					var b2=fixNum(parseFloat(b).toFixed(8))+' BCH ($'+bchtousd(b)+' USD)';
+					var b2=BigNumber(b).toFixed(8)+' BCH ($'+bchtousd(b)+' USD)';
 					document.getElementById('bchtip_inwrap'+id).style.display='none';
 					var d=document.getElementById('bchtip'+id).getAttribute('data-tip');
 					d=d.split(';');
@@ -673,4 +654,6 @@ function afterDOMLoaded(){
 	window.addEventListener('blur',function(){
 		blurred=1;
 	});
+	BigNumber.config({ DECIMAL_PLACES: 8, ROUNDING_MODE: 1 }); // down
+	BigNumberUp=BigNumber.clone({ DECIMAL_PLACES: 8, ROUNDING_MODE: 4 }); // half-up
 }

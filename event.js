@@ -1,6 +1,7 @@
 /* BCH Tips event.js */
 // tries to send up to 250 queued tips every 60m
 // 14s between requests to profile page and bchtips database
+var si='',serr=0,nl={};
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 	chrome.alarms.clear('txq'); // test
@@ -32,7 +33,6 @@ function afterDOMLoaded(){
 	chrome.alarms.onAlarm.addListener(function(a){ txqInit(); });
 	
 	// send all queued items
-	var si='',serr=0,nl={};
 	function send(){
 		//console.log('send()');
 		if(!si) si=setInterval(function(){ send(); },14000);
@@ -127,7 +127,7 @@ function afterDOMLoaded(){
 							//console.log('fee estimate='+fr+' sat/B');
 							//console.log('got everything we need. time to send.');
 							//console.log('creating tx');
-							var amt=Math.floor(parseFloat(o.tx_queue[0][1].split(' ')[0]*100000000));
+							var amt=parseFloat(BigNumber(o.tx_queue[0][1].split(' ')[0]).times(100000000).toFixed(0));
 							//console.log('amt='+amt);
 							var tx=makeTx(x2.responseText,df.data.waddr,df.data.wkey,uaddr,amt,fr);
 							//console.log('tx='); console.log(tx);
@@ -228,12 +228,11 @@ function afterDOMLoaded(){
 
 // remove old listeners https://stackoverflow.com/a/33135296
 function removeOldListenersCB(cb){
-	console.log('removeOldListeners()');
 	chrome.notifications.getAll(function(n){ cb(n); });
 }
 function removeOldListeners(){
+	if(!nl) return;
 	removeOldListenersCB(function(n){
-		if(!nl) return;
 		for(var p in nl) if(nl.hasOwnProperty(p)) if(!n[p]) delete nl[p];
 	});
 }
