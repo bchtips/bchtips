@@ -18,6 +18,7 @@ chrome.runtime.onInstalled.addListener(function(details){
 		if(details.reason=='install') var t='installed';
 		else if(details.reason=='update') var t='updated';
 		for(var i=0;i<tabs.length;i++){
+			if(!tabs[i].url) continue;
 			if(tabs[i].url.indexOf('.reddit.com/')!==-1){
 				var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/; // index pages
 				var p2=/^https:\/\/(.*)\.reddit\.com\/r\/(.*)\/comments\/(.*)/; // comment pages

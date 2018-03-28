@@ -87,18 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		if(!error){
-			chrome.tabs.query({active:true,currentWindow:true},function(tabArr){
-				url=tabArr[0].url;
-				for(i=0;i<valid_site_urls.length;i++){
-					var q=valid_site_urls[i];
-					if(url.substr(0,q.length)==q){
-						if(q.indexOf('reddit')!=-1){
-							sitestatus='<img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-16x16.png">  Reddit tipping enabled.<br>Click <span class="greenbold">send tip</span> beneath a comment or post.';
-							break;
-						} else if(q.indexOf('twitter')!=-1){
-							sitestatus='Twitter tipping enabled.<br>Click Tip beneath a tweet.';
-							break;
-						}
+			chrome.tabs.query({active:true,currentWindow:true}, function(tabs){
+				for(var i=0;i<tabs.length;i++){
+					if(!tabs[i].url) continue;
+					if(tabs[i].url.indexOf('.reddit.com/')!==-1){
+						sitestatus='<img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-16x16.png">  Reddit tipping enabled.<br>Click <span class="greenbold">send tip</span> beneath a comment or post.';
+						break;
 					}
 				}
 				if(!sitestatus) sitestatus='Browse to a supported site to start tipping!';

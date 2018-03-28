@@ -655,7 +655,6 @@ function afterDOMLoaded(){
 		setTimeout(function(){ updateUtxos(); },2000);
 	}, 21000);
 	window.addEventListener('focus',function(){
-		
 		if(document.getElementById('bchtip_globals').getAttribute('data-start')!=starttime){ if(debug) console.log('another copy started, skipping focus ['+starttime+']'); return; } else if(debug) console.log('focus ['+starttime+']');
 		if(Date.now()-lastfoc>=5000 && document.getElementsByClassName('bchtip_div').length!==0){
 			updateRate();
