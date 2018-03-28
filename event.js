@@ -58,6 +58,7 @@ function afterDOMLoaded(){
 	// init, check lock
 	function txqInit(){
 		if(debug) console.log('txqInit() '+Date.now());
+		serr=0,lastd=0,start=Date.now(),senttxids={};
 		chrome.storage.sync.get(['txq_lock'],function(o){
 			if(o.txq_lock){
 				var la=Date.now()-o.txq_lock;
