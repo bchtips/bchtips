@@ -74,7 +74,7 @@ function updateEstimate(id,bo){
 		var func=function(ev){
 			var id=ev.srcElement.getAttribute('data-id');
 			// expand comment-reply box by clicking reply button if not top post
-			if(!document.getElementById('bchtip_div'+id).getAttribute('data-noreply')){
+			if(!document.getElementById('bchtip_div'+id).getAttribute('data-noreply') && !updating){
 				if(!document.getElementById('bchtip_div'+id).getAttribute('data-top')){
 					if(!document.getElementById('bchtip_globals').getAttribute('data-archived')){
 						var c='x=document.getElementById("bchtip'+id+'").parentNode.parentNode.getElementsByClassName("reply-button")[0].children[0].click();'; var s=document.createElement('script'); s.textContent=c; (document.head||document.documentElement).appendChild(s); s.remove();
@@ -86,8 +86,8 @@ function updateEstimate(id,bo){
 				}
 			}
 			// focus on amount or unit
-			if(document.getElementById('bchtip_unit'+id).value=='all') document.getElementById('bchtip_unit'+id).focus();
-			else {
+			if(document.getElementById('bchtip_unit'+id).value=='all' && !updating) document.getElementById('bchtip_unit'+id).focus();
+			else if(!updating){
 				document.getElementById('bchtip_amt'+id).focus();
 				document.getElementById('bchtip_amt'+id).select();
 			}
@@ -160,6 +160,7 @@ function updateTip(id){
 				updateEstimate(id);
 				return;
 			} else if(!utxos || utxos.length==0){
+				if(debug) console.log('id '+id+' !utxos || utxos.length==0');
 				document.getElementById('bchtip_send'+id).style.display='none';
 				document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Insufficient funds</span>';
 				document.getElementById('bchtip_feewarn'+id).innerHTML='';
@@ -248,6 +249,9 @@ function updateTip(id){
 				document.getElementById('bchtip_feewarn'+id).innerHTML='<span class="bchtip_warn">Slightly overpaying fee.</span><br>';
 			} else document.getElementById('bchtip_feewarn'+id).innerHTML='';
 			if(noaddr) document.getElementById('bchtip_feewarn'+id).innerHTML+='This is just an estimate. Balance and fees at sending time will affect results.<br>';
+			if(document.getElementById('bchtip_globals').getAttribute('data-archived')||document.getElementById('bchtip_div'+id).getAttribute('data-noreply')){
+				document.getElementById('bchtip_feewarn'+id).innerHTML+='Commenting is unavailable but you can send a private message.<br>';
+			}
 		} else {
 			alert('BCH Tips: You must set an address and key. Click the extension icon');
 			return;
@@ -267,7 +271,7 @@ function resetTipBox(id){
 function sendTipClicked(d){
 	if(debug) console.log('bchtips sendTipClicked()');
 	d=d.split(';');
-	id=d[0]; a=d[1]; u=d[2];
+	var id=d[0],a=d[1],u=d[2];
 	if(debug) console.log('id='+id+' a='+a+' u='+u);
 	// load storage, then multi ajax
 	chrome.storage.sync.get(['data','lastsend'],function(o){
@@ -483,7 +487,7 @@ function sendTipClicked(d){
 					}
 				});
 				// scroll to tip
-				if(window.hash=='#tip'){
+				if(window.hash=='#tip' && id==0 && !updating){
 					document.getElementById('bchtip_div'+id).scrollIntoView(true);
 					var viewportH = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 					window.scrollBy(0, (document.getElementById('bchtip_div'+id).getBoundingClientRect().height-viewportH)/2+100);
@@ -500,6 +504,7 @@ var eid=0; // never overwrite this global or load more will break
 function addTipLinks(e){
 	var x = e.getElementsByClassName("flat-list buttons");
 	for(var i=0;i<x.length;i++){
+		if(updating) if(document.getElementById('bchtip_div'+eid)){ if(debug) console.log('skipping addlink id '+eid+' because it exists'); eid++; continue; }
 		var y=x[i].getElementsByTagName("li");
 		y=y[y.length-1];
 		if(!y) continue;
@@ -625,6 +630,9 @@ function parseUtxos(r,n){ // n=dont update all balances, used when first tip ope
 // init
 var lastfoc=0;
 var blurred='';
+var starttime=Date.now();
+if(document.getElementById('bchtip_globals') && document.getElementById('bchtip_globals').getAttribute('data-start')!=starttime) var updating=1; else var updating=''; // to skip #tip auto-open and amt focus
+if(updating) setTimeout(function(){ updating=''; if(debug) console.log('unsetting updating'); },20000); // so focus on amt works again
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 	var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/ // index pages
@@ -634,16 +642,20 @@ function afterDOMLoaded(){
 	x.setAttribute('id','bchtip_globals');
 	x.setAttribute('type','hidden')
 	document.body.appendChild(x);
+	document.getElementById('bchtip_globals').setAttribute('data-start',starttime);
 	if(p1.test(window.location.href.split("?")[0])) document.getElementById('bchtip_globals').setAttribute('data-index',1);
 	if(document.getElementsByClassName('archived-infobar').length>0) document.getElementById('bchtip_globals').setAttribute('data-archived',1);
 	addTipLinks(document);
-	if(window.location.hash=='#tip') document.getElementById('bchtip0').click();
+	if(window.location.hash=='#tip' && !updating) document.getElementById('bchtip0').click();
 	setInterval(function(){
 		if(document.getElementsByClassName('bchtip_div').length===0 || blurred) return; // skip if no tips open
+		if(document.getElementById('bchtip_globals').getAttribute('data-start')!=starttime){ if(debug) console.log('another copy started, skipping interval ['+starttime+']'); return; } else if(debug) console.log('interval() ['+starttime+']');
 		updateRate();
 		setTimeout(function(){ updateUtxos(); },2000);
 	}, 21000);
 	window.addEventListener('focus',function(){
+		
+		if(document.getElementById('bchtip_globals').getAttribute('data-start')!=starttime){ if(debug) console.log('another copy started, skipping focus ['+starttime+']'); return; } else if(debug) console.log('focus ['+starttime+']');
 		if(Date.now()-lastfoc>=5000 && document.getElementsByClassName('bchtip_div').length!==0){
 			updateRate();
 			setTimeout(function(){ updateUtxos(); },2000);
@@ -652,6 +664,7 @@ function afterDOMLoaded(){
 		blurred='';
 	});
 	window.addEventListener('blur',function(){
+		if(document.getElementById('bchtip_globals').getAttribute('data-start')!=starttime){ if(debug) console.log('another copy started, skipping blur ['+starttime+']'); return; } else if(debug) console.log('blur ['+starttime+']');
 		blurred=1;
 	});
 	BigNumber.config({ DECIMAL_PLACES: 8, ROUNDING_MODE: 1 }); // down

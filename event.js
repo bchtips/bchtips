@@ -1,16 +1,41 @@
 /* BCH Tips event.js */
 
+// https://stackoverflow.com/a/21535234
+function executeScripts(tabId,injectDetailsArray){
+	function createCallback(tabId,injectDetails,innerCallback){
+		return function(){ chrome.tabs.executeScript(tabId,injectDetails,innerCallback); };
+	}
+	var callback = null;
+	for(var i=injectDetailsArray.length-1;i>=0;--i) callback=createCallback(tabId,injectDetailsArray[i],callback);
+	if (callback !== null) callback(); // execute outermost function
+}
+
 // refresh pages on install or upgrade
 chrome.runtime.onInstalled.addListener(function(details){
 	if(debug) console.log(details);
 	chrome.tabs.query({}, function(tabs){
 		if(debug) console.log(tabs);
-		if(details.reason=='install') var t='installed'; // todo: run all the scripts instead of showing popup
+		if(details.reason=='install') var t='installed';
 		else if(details.reason=='update') var t='updated';
 		for(var i=0;i<tabs.length;i++){
 			if(tabs[i].url.indexOf('.reddit.com/')!==-1){
-			    chrome.tabs.executeScript(tabs[i].id,{ code: "var p1=/^https:\\/\\/(.*)\\.reddit\\.com\\/r\\/[^\\/]*\\/$/; var p2=/^https:\\/\\/(.*)\\.reddit\\.com\\/r\\/(.*)\\/comments\\/\(.*)/; if(p1.test('"+tabs[i].url+"'.split('?')[0])||p2.test('"+tabs[i].url+"')){ var html='<dialog id=\"dialog\" style=\"text-align:center; border-radius:10px; border-color:#222; color:#222;\"><form method=\"dialog\"><p style=\"font:22px verdana\">BCH Tips "+t+". Page refresh required. Do it now?</p><div style=\"font-size:14px\">(We\\'ll hopefully be able to remove this requirement soon.)</div><button type=submit value=yes>Yes</button> <button type=submit value=no autofocus>No</button></form></dialog>'; var x=document.createElement('div'); console.log(html); x.innerHTML=html; document.body.appendChild(x); var dialog = document.getElementById('dialog');dialog.showModal();dialog.addEventListener('close', function (event){ if (dialog.returnValue == 'yes') location.reload(); }); }" });
-			}
+				var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/; // index pages
+				var p2=/^https:\/\/(.*)\.reddit\.com\/r\/(.*)\/comments\/(.*)/; // comment pages
+				if(!p1.test(tabs[i].url.split("?")[0])&&!p2.test(tabs[i].url)) continue;
+				executeScripts(tabs[i].id, [
+					// remove divs, skip sent; remove send tip links, skip sent; save/restore open tip amounts & units
+					// todo: if want skipped 'send tip' and reset links to work have to remove and replace everything - too little benefit for all that
+					{ code: "var save=[],sent=0;var bchs=document.getElementsByClassName('bchtip_div');for(i=bchs.length-1;i>=0;i--){var id=bchs[i].getAttribute('data-id');if(document.getElementById('bchtip_div'+id)&&document.getElementById('bchtip_div'+id).getAttribute('data-sent'))continue;save.push({'data':document.getElementById('bchtip'+id).getAttribute('data-tip'),'amt':document.getElementById('bchtip_amt'+id).value,'unit':document.getElementById('bchtip_unit'+id).value});removeElem(bchs[i])}var bchs=document.getElementsByClassName('bchtip_link');for(i=bchs.length-1;i>=0;i--){var id=bchs[i].getAttribute('data-id');if(document.getElementById('bchtip_div'+id)&&document.getElementById('bchtip_div'+id).getAttribute('data-sent')){sent++;continue}var p=bchs[i].parentNode;removeElem(bchs[i]);removeElem(p)}function removeElem(e){return e.parentNode.removeChild(e)}" },
+					{ file: "lib/bignumber.min.js" },
+					{ file: "lib/bchaddrjs-0.2.0.min.js" },
+					{ file: "lib/bitcoincash-0.1.10.min.js" },
+					{ file: "lib/chrome-Storage-largeSync.min.js" },
+					{ file: "lib/lz-string.min.js" },
+					{ file: "global.js" },
+					{ file: "reddit.js" },
+					{ code: "if(save.length>0||sent>0){var saves=[],ids=[];setTimeout(function(){var x=document.getElementsByClassName('flat-list buttons');for(i=0;i<x.length;i++){var y=x[i].getElementsByTagName('li');y=y[y.length-1];if(!y) continue;var a=x[i].parentNode.parentNode.getElementsByClassName('author');a=a[0].innerHTML;if(a=='[deleted]')continue;else if(a=='AutoModerator')continue;if(y.getElementsByTagName('a')[0]&&y.getElementsByTagName('a')[0].getAttribute('data-tip')){var id=y.getElementsByTagName('a')[0].getAttribute('data-tip').split(';')[0];var u=y.getElementsByTagName('a')[0].getAttribute('data-tip').split(';')[2];for(j=0;j<save.length;j++){if(save[j].data.split(';')[2]==u){ids.push(id);saves.push(save[j]);break}}}}if(ids.length>0){if(!document.getElementById('bchtip_div'+ids[0]))document.getElementById('bchtip'+ids[0]).click();setTimeout(function(){document.getElementById('bchtip_amt'+ids[0]).value=saves[0].amt;document.getElementById('bchtip_unit'+ids[0]).value=saves[0].unit},3000)}if(ids.length>1)setTimeout(function(){for(var i=1;i<ids.length;i++){if(!document.getElementById('bchtip_div'+ids[i]))document.getElementById('bchtip'+ids[i]).click();setTimeout(function(){for(var i=1;i<ids.length;i++){document.getElementById('bchtip_amt'+ids[i]).value=saves[i].amt;document.getElementById('bchtip_unit'+ids[i]).value=saves[i].unit}},3000)}},4000);if(sent>0)updateUtxos()},4000)}iqwerty.toast.Toast('BCH Tips has "+t+". :)',{style:{main:{'font-size':'16px'}},settings:{duration:12000}})" }
+				]);
+   			}
 		}
 	});
 });
