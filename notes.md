@@ -19,13 +19,14 @@
 
 ## event.js
 - dont set alarm until first tip queued
+- transaction attempt log
 
 ## misc
 - get and sync feerate globally only every 60s
 - firefox, opera and other browser support
 
 ## minor improvements / may not implement
-- don't allow queuing of dust amounts (currently lower than ~700) or notify when queued send fails for that reason
+- don't allow queuing of dust amounts (currently lower than ~700), notify when queued send fails for that reason
 - dont activate 'view tx' explorer link after send for a couple seconds so the tx is always in mempool when the user clicks
 - use multi-ajax to run updateRate and updateUtxos at same time (keeping the 2s offset allows for separate adjustment)
 - disable queuing 'all' funds because test address signature and actual signature size can be off by one sat (insufficient funds on final send)

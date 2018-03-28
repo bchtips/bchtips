@@ -12,9 +12,9 @@ function executeScripts(tabId,injectDetailsArray){
 
 // refresh pages on install or upgrade
 chrome.runtime.onInstalled.addListener(function(details){
-	if(debug) console.log(details);
+	//if(debug) console.log(details);
 	chrome.tabs.query({}, function(tabs){
-		if(debug) console.log(tabs);
+		//if(debug) console.log(tabs);
 		if(details.reason=='install') var t='installed';
 		else if(details.reason=='update') var t='updated';
 		for(var i=0;i<tabs.length;i++){
@@ -25,7 +25,7 @@ chrome.runtime.onInstalled.addListener(function(details){
 				executeScripts(tabs[i].id, [
 					// remove divs, skip sent; remove send tip links, skip sent; save/restore open tip amounts & units
 					// todo: if want skipped 'send tip' and reset links to work have to remove and replace everything - too little benefit for all that
-					{ code: "var save=[],sent=0;var bchs=document.getElementsByClassName('bchtip_div');for(i=bchs.length-1;i>=0;i--){var id=bchs[i].getAttribute('data-id');if(document.getElementById('bchtip_div'+id)&&document.getElementById('bchtip_div'+id).getAttribute('data-sent'))continue;save.push({'data':document.getElementById('bchtip'+id).getAttribute('data-tip'),'amt':document.getElementById('bchtip_amt'+id).value,'unit':document.getElementById('bchtip_unit'+id).value});removeElem(bchs[i])}var bchs=document.getElementsByClassName('bchtip_link');for(i=bchs.length-1;i>=0;i--){var id=bchs[i].getAttribute('data-id');if(document.getElementById('bchtip_div'+id)&&document.getElementById('bchtip_div'+id).getAttribute('data-sent')){sent++;continue}var p=bchs[i].parentNode;removeElem(bchs[i]);removeElem(p)}function removeElem(e){return e.parentNode.removeChild(e)}" },
+					{ code: "var save=[],sent=0;var bchs=document.getElementsByClassName('bchtip_div');for(i=bchs.length-1;i>=0;i--){var id=bchs[i].getAttribute('data-id');if(document.getElementById('bchtip_div'+id)&&document.getElementById('bchtip_div'+id).getAttribute('data-sent'))continue;save.push({'data':document.getElementById('bchtip'+id).getAttribute('data-tip'),'amt':document.getElementById('bchtip_amt'+id).value,'unit':document.getElementById('bchtip_unit'+id).value});removeElem(bchs[i])}var bchs=document.getElementsByClassName('bchtip_link');for(i=bchs.length-1;i>=0;i--){var id=bchs[i].getAttribute('data-id');if(document.getElementById('bchtip_div'+id)&&document.getElementById('bchtip_div'+id).getAttribute('data-sent')){document.getElementById('bchtip'+id).innerHTML='tip locked due to update, refresh page to reset';sent++;continue}var p=bchs[i].parentNode;removeElem(bchs[i]);removeElem(p)}function removeElem(e){return e.parentNode.removeChild(e)}" },
 					{ file: "lib/bignumber.min.js" },
 					{ file: "lib/bchaddrjs-0.2.0.min.js" },
 					{ file: "lib/bitcoincash-0.1.10.min.js" },
@@ -40,18 +40,19 @@ chrome.runtime.onInstalled.addListener(function(details){
 	});
 });
 
-// tries to send up to 250 queued tips every 60m
+// tries to send up to ~250 queued tips every 60m
 // 14s between requests to profile page and bchtips database
-var si='',serr=0,nl={},lastd=0;
+var si='',serr=0,nl={},lastd=0,start=Date.now(),locktime=3570000,afreqm=10,pertryms=14000,senttxids={};
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 
 	// set alarm
-	chrome.alarms.clear('txq'); // test
+	//chrome.alarms.clear('txq'); // test
 	chrome.alarms.get('txq',function(a){
-		if(a) return;
-		if(debug) console.log('creating alarm');
-		chrome.alarms.create('txq',{periodInMinutes:60});
+		if(a){ if(debug){ console.log('alarm is set. a='); console.log(a); } return; }
+		if(debug) console.log('creating alarm for every '+afreqm+' minutes');
+		chrome.alarms.create('txq',{periodInMinutes:afreqm});
+		if(debug) setTimeout(function(){ chrome.alarms.getAll(function(a){ console.log('all alarms='); console.log(a); }); },1000);
 	});
 	
 	// init, check lock
@@ -60,14 +61,14 @@ function afterDOMLoaded(){
 		chrome.storage.sync.get(['txq_lock'],function(o){
 			if(o.txq_lock){
 				var la=Date.now()-o.txq_lock;
-				if(la>3580000) var le=1; else var le=''; // ~1hr
+				if(la>locktime) var le=1; else var le=''; // ~1hr
 			} else var le='';
 			if(!o || !o.txq_lock || le){
 				if(debug) if(le) console.log('lock expired (set '+la+' ago), setting and sending'); else console.log('no lock, setting and sending');
 				chrome.storage.sync.set({'txq_lock':Date.now()});
 				send();
 			} else {
-				if(debug) console.log('lock found (set '+la+' ago), we\'re running');
+				if(debug) console.log('lock found ('+la+'/'+locktime+'), not sending');
 				// if crash or reinstall lock will be set until expiry - cant detect particular browser
 			}
 		});
@@ -77,14 +78,19 @@ function afterDOMLoaded(){
 	
 	// send current item
 	function send(){
-		if(!si) si=setInterval(function(){ send(); },14000);
+		if(!si) si=setInterval(function(){ send(); },pertryms);
+		if(Date.now()-start>locktime){
+			if(debug) console.log('script running longer than max lock time, aborting');
+			clearInterval(si);
+			return;
+		}
 		// get wallet & fee
 		chrome.storage.sync.get(['data','fee'],function(df){
 			//if(debug){ console.log('df='); console.log(df); }
 			if(!df.data || !df.data.waddr || !df.data.wkey){
 				if(debug) console.log('no wallet addr/key set. aborting');
 				clearInterval(si);
-				chrome.storage.sync.set({'txq_lock':''});
+				//chrome.storage.sync.set({'txq_lock':''});
 				return;
 			}
 			// check if items in queue
@@ -98,7 +104,7 @@ function afterDOMLoaded(){
 					if(!found){
 						if(debug) console.log('no item found newer than '+lastd+'. all done');
 						clearInterval(si);
-						chrome.storage.sync.set({'txq_lock':''});
+						//chrome.storage.sync.set({'txq_lock':''});
 						return;
 					} else if(debug) console.log('item='+item.join(' '));
 
@@ -117,7 +123,7 @@ function afterDOMLoaded(){
 								if(serr>2){
 									if(debug) console.log('too many errors. abort (0)');
 									clearInterval(si);
-									chrome.storage.sync.set({'txq_lock':''});
+									//chrome.storage.sync.set({'txq_lock':''});
 									return;
 								}
 								return;
@@ -162,7 +168,7 @@ function afterDOMLoaded(){
 									if(serr>2){
 										if(debug) console.log('too many errors. abort (1)');
 										clearInterval(si);
-										chrome.storage.sync.set({'txq_lock':''});
+										//chrome.storage.sync.set({'txq_lock':''});
 										return;
 									}
 									return;
@@ -197,6 +203,11 @@ function afterDOMLoaded(){
 												//if(debug){ console.log('r='); console.log(r); }
 												// add to tx_sent
 												if(r.txid){
+													if(senttxids[r.txid]){
+														// wasn't really accepted - can happen if two tips for same amount to same user before confirmation
+														if(debug) console.log('duplicate txid received ('+r.txid+') - wasn\'t really sent, skipping for now');
+														return;
+													}
 													if(debug) console.log('sent '+item[1]+' to '+item[2]+ '. tx='+r.txid);
 													var m=new SpeechSynthesisUtterance('Tip sent');
 													speechSynthesis.speak(m);
@@ -232,12 +243,19 @@ function afterDOMLoaded(){
 													setTimeout(function(){
 														for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1) chrome.extension.getViews()[i].refreshData();
 													},5000);
+													senttxids[r.txid]=1;
 												} else senderr=1;
 											} else var senderr=1;
 										} else var senderr=1;
 									}
 									if(senderr){
-										if(debug){ console.log("send error x="); console.log(x); }
+										if(x.responseText.indexOf('txn-mempool-conflict')!==-1){
+											// retry
+											if(debug) console.log('mempool conflict (waiting for new utxo), retrying');
+											lastd=item[0]-1;
+											return;
+										}
+										if(debug){ console.log('send error. r='+x.responseText+' x='); console.log(x); }
 									}
 								}
 								x.send('rawtx='+tx.tx);
@@ -253,7 +271,7 @@ function afterDOMLoaded(){
 										}
 									});
 									clearInterval(si);
-									chrome.storage.sync.set({'txq_lock':''});
+									//chrome.storage.sync.set({'txq_lock':''});
 									return;
 								}
 							}
@@ -264,7 +282,7 @@ function afterDOMLoaded(){
 				} else {
 					if(debug) console.log('no items to send');
 					clearInterval(si);
-					chrome.storage.sync.set({'txq_lock':''});
+					//chrome.storage.sync.set({'txq_lock':''});
 					return;
 				}
 			});

@@ -502,6 +502,7 @@ function sendTipClicked(d){
 // add tip links to bylines
 var eid=0; // never overwrite this global or load more will break
 function addTipLinks(e){
+	if(!e) e=document;
 	var x = e.getElementsByClassName("flat-list buttons");
 	for(var i=0;i<x.length;i++){
 		if(updating) if(document.getElementById('bchtip_div'+eid)){ if(debug) console.log('skipping addlink id '+eid+' because it exists'); eid++; continue; }
@@ -645,7 +646,7 @@ function afterDOMLoaded(){
 	document.getElementById('bchtip_globals').setAttribute('data-start',starttime);
 	if(p1.test(window.location.href.split("?")[0])) document.getElementById('bchtip_globals').setAttribute('data-index',1);
 	if(document.getElementsByClassName('archived-infobar').length>0) document.getElementById('bchtip_globals').setAttribute('data-archived',1);
-	addTipLinks(document);
+	addTipLinks();
 	if(window.location.hash=='#tip' && !updating) document.getElementById('bchtip0').click();
 	setInterval(function(){
 		if(document.getElementsByClassName('bchtip_div').length===0 || blurred) return; // skip if no tips open

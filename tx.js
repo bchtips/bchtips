@@ -19,7 +19,6 @@ function cancelQueued(d,u){
 function refreshData(){
 	if(!document.hasFocus()) return;
 	if(debug) console.log('refreshData()');
-	lr=Date.now();
 	// queued tx
 	chrome.storage.largeSync.get(['tx_queue','tx_sent'],function(o){
 		if(debug){ console.log('o.tx_queue='); console.log(o.tx_queue); }
@@ -84,11 +83,10 @@ function refreshData(){
 	});
 }
 
-var lr=0;
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 	window.addEventListener('focus',function(){
-		if(Date.now()-lr>=5000) refreshData();
+		refreshData();
 	});
 	refreshData();
 }
