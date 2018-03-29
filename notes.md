@@ -2,7 +2,7 @@
 - set tip amount box, unit select, reply textarea to browser default like Send button, make sure tip box looks good on variety of subreddit styles
 - cancel reply if empty when cancel tip
 - update step amount when rate changes
-- add alternatives to blockdozer api in case of downtime like march 28th. find ones that actually relay for 1 sat/B unlike bitpay and bitcoin.com :/
+- add alternatives to blockdozer api in case of downtime like march 28th
 
 ## popup.js
 - sync price/rate with that retrieved by reddit.js

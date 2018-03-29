@@ -105,8 +105,8 @@ function showReplyText(b,id){
 		var t1='I sent you a tip of '+b+' with [BCH Tips](/r/bchtips)!';
 		var t2='I sent you a tip of '+b+fyp+' with [BCH Tips](/r/bchtips)!';
 	} else {
-		var t1='I tipped you '+b+' with [BCH Tips](/r/bchtips)! [How to collect](https://redd.it/7xwesx)';
-		var t2='I tipped you '+b+fyp+' with [BCH Tips]! [How to collect](https://redd.it/7xwesx)';
+		var t1='I tipped you '+b+'! [How to collect](https://redd.it/7xwesx)';
+		var t2='I tipped you '+b+fyp+'! [How to collect](https://redd.it/7xwesx)';
 	}
 	if(document.getElementById('bchtip_globals').getAttribute('data-archived')||document.getElementById('bchtip_div'+id).getAttribute('data-noreply')){
 		var rtext='Reply unavailable. ';
@@ -554,8 +554,7 @@ function updateRate(){
 			document.getElementById('bchtip_globals').setAttribute('data-rate',o.rate_last_value);
 		} else {
 			chrome.storage.sync.set({'rate_last_time':Date.now()});
-			var x=new XMLHttpRequest();
-			x.timeout=15000;
+			var x=new XMLHttpRequest(); x.timeout=15000;
 			x.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 			x.onreadystatechange=function(){
 				if(x.readyState==4){

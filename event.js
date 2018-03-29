@@ -41,9 +41,20 @@ chrome.runtime.onInstalled.addListener(function(details){
 });
 
 chrome.notifications.onButtonClicked.addListener(function(ni,bi){
-		var url=evg.nl[ni][bi];
-		if(debug) console.log('notifClicked ni='+ni+' bi='+bi+' url='+url);
-		window.open(url,'_blank');
+		chrome.storage.local.get('notifs',function(o){
+			//if(debug){ console.log('notifClicked ni='+ni+' bi='+bi+' notifs='); console.log(o.notifs); }
+			var url=o.notifs[ni][bi];
+			window.open(url,'_blank');
+		});
+});
+
+chrome.notifications.onClosed.addListener(function(id,bu){
+	chrome.storage.local.get('notifs',function(o){
+		//if(debug){ console.log('notification closed, id='+id+' byuser='+bu); }
+		delete o.notifs[id];
+		//if(debug){ console.log('new notifs='); console.log(o.notifs); }
+		chrome.storage.local.set({notifs:o.notifs});
+	});
 });
 
 // tries to send up to ~250 queued tips every 60m
@@ -53,7 +64,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 function afterDOMLoaded(){
 
 	// set alarm
-	chrome.alarms.clear('txq');
+	//chrome.alarms.clear('txq');
 	chrome.alarms.get('txq',function(a){
 		if(a){ if(debug){ console.log('alarm is set. a='); console.log(a); } return; }
 		if(debug) console.log('creating alarm for every '+evg.afreqm+' minutes');
@@ -72,7 +83,7 @@ function afterDOMLoaded(){
 			if(!o || !o.txq_lock || le){
 				if(debug) if(le) console.log('lock expired (set '+la+' ago), setting and sending'); else console.log('no lock, setting and sending');
 				chrome.storage.sync.set({'txq_lock':Date.now()});
-				evg.serr=0,evg.item='',evg.lastd=0,evg.start=Date.now(),evg.senttxids={};
+				evg.serr=0,evg.item='',evg.lastd=0,evg.start=Date.now(),evg.senttxids={}; // reset when page isnt reloaded
 				send();
 			} else {
 				if(debug) console.log('lock found ('+la+'/'+evg.locktime+'), not sending');
@@ -85,10 +96,10 @@ function afterDOMLoaded(){
 	
 	// send current item
 	function send(){
-		//if(debug) console.log('send()');
+		if(debug){ console.log('send() evg='); console.log(evg); }
 		if(!evg.si) evg.si=setInterval(function(){ send(); },evg.pertryms);
 		if(Date.now()-evg.start>evg.locktime){
-			if(debug) console.log('script running longer than max lock time, aborting');
+			if(debug) console.log('script running longer than max lock time, aborting'); // todo: move lock up
 			clearInterval(evg.si); evg.si='';
 			return;
 		}
@@ -218,9 +229,11 @@ function afterDOMLoaded(){
 													if(evg.item[5]=='r') var st='Reddit';
 													chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+evg.item[1]+' sent to '+evg.item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
 															// add to listener object
-															evg.nl[id]=['https://www.reddit.com'+evg.item[3],'https://blockdozer.com/insight/tx/'+r.txid];
-															if(debug){ console.log('created notif id='+id+' nl='); console.log(evg.nl); }
-															removeOldListeners();
+															chrome.storage.local.get('notifs',function(on){
+																on.notifs[id]=['https://www.reddit.com'+evg.item[3],'https://blockdozer.com/insight/tx/'+r.txid];
+																//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
+																chrome.storage.local.set({notifs:on.notifs});
+															});
 													});
 													// remove from tx_queue
 													chrome.storage.largeSync.get(['tx_queue'],function(oq){
@@ -240,8 +253,8 @@ function afterDOMLoaded(){
 													});
 													// refresh tx pages
 													setTimeout(function(){
-														for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1) chrome.extension.getViews()[i].refreshData();
-													},5000);
+														for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshData();
+													},2000);
 													evg.senttxids[r.txid]=1;
 												} else senderr=1;
 											} else var senderr=1;
@@ -261,7 +274,7 @@ function afterDOMLoaded(){
 							} else {
 								// insufficient funds or other
 								if(debug){ console.log('error'); console.log(tx); }
-								if(tx.msg=='insufficient funds'){
+								if(tx.msg=='insufficient funds'||tx.msg=='no utxos'){
 									chrome.notifications.getAll(function(n){
 										if(!n.need_funds){
 											var m=new SpeechSynthesisUtterance('insufficient funds');
@@ -291,17 +304,4 @@ function afterDOMLoaded(){
 	function alldone(){
 		// remove items not in tx_queue from tx_tocancel
 	}
-}
-
-// remove old listeners https://stackoverflow.com/a/33135296
-function removeOldListenersCB(cb){
-	chrome.notifications.getAll(function(n){ cb(n); });
-}
-function removeOldListeners(){
-	if(debug){ console.log('removeOldListeners() old nl='); console.log(evg.nl); }
-	if(!evg.nl) return;
-	removeOldListenersCB(function(n){
-		for(var p in evg.nl) if(evg.nl.hasOwnProperty(p)) if(!n[p]) delete evg.nl[p];
-		if(debug){ console.log('removeOldListeners() new nl='); console.log(evg.nl); }
-	});
 }

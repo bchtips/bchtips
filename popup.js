@@ -6,14 +6,15 @@ var sitestatus='';
 
 function balDisplay(b,u,r){ // bal, unconfirmed bal, rate
 	document.getElementById('bal_wrap').innerHTML='Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd">&nbsp;</div>';
-	document.getElementById('wbal').innerHTML=parseFloat(b).toFixed(8)+' BCH<br>';
-	if(b>0) document.getElementById('wbal_usd').innerHTML=' ($'+parseFloat(r*b).toFixed(2)+' USD)<br>';
+	if(b!=0) b=parseFloat(b).toFixed(8);
+	document.getElementById('wbal').innerHTML=b+' BCH<br>';
+	if(b>0) document.getElementById('wbal_usd').innerHTML=' ($'+parseFloat(r*b).toFixed(2)+' USD)<br>'; else document.getElementById('wbal_usd').innerHTML='';
 	if(u!=0){
 		document.getElementById('bal_wrap').innerHTML+='<span id="wbalu"></span><span id="wbalu_usd"></span><br>';
 		if(u>0) var sign='+'; else var sign='';
 		document.getElementById('wbalu').innerHTML=sign+parseFloat(u).toFixed(8)+' BCH ';
 		if(u<0) uu=u*-1; else uu=u;
-		document.getElementById('wbalu_usd').innerHTML=' ($'+parseFloat(r*uu).toFixed(2)+' USD)<br>';
+		document.getElementById('wbalu_usd').innerHTML=' ($'+parseFloat(r*uu).toFixed(2)+' USD)';
 	}
 	document.getElementById('bal_wrap').innerHTML+='<br><div id="status"></div>';
 	if((b==0 && u<=0) || b+u<=0) document.getElementById('status').innerHTML='Fund your address to start tipping!'; else document.getElementById('status').innerHTML=sitestatus;
@@ -92,12 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		if(!error){
 			chrome.tabs.query({active:true,currentWindow:true}, function(tabs){
-				for(var i=0;i<tabs.length;i++){
-					if(!tabs[i].url) continue;
-					if(tabs[i].url.indexOf('.reddit.com/')!==-1){
-						sitestatus='<img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-16x16.png">  Reddit tipping enabled.<br>Click <span class="greenbold">send tip</span> beneath a comment or post.';
-						break;
-					}
+				if(tabs[0] && tabs[0].url && tabs[0].url.indexOf('.reddit.com/')!==-1){
+					sitestatus='<img src="https://www.redditstatic.com/desktop2x/img/favicon/favicon-16x16.png">  Reddit tipping enabled.<br>Click <span class="greenbold">send tip</span> beneath a comment or post.';
 				}
 				if(!sitestatus) sitestatus='Browse to a supported site to start tipping!';
 

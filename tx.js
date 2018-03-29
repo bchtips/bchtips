@@ -18,7 +18,6 @@ function cancelQueued(d,u){
 
 function refreshData(){
 	if(debug) console.log('refreshData()');
-	if(!document.hasFocus()){ if(debug) console.log('!hasFocus() abort'); return; }
 	// queued tx
 	chrome.storage.largeSync.get(['tx_queue','tx_sent'],function(o){
 		if(debug){ console.log('o.tx_queue='); console.log(o.tx_queue); }

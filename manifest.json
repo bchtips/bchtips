@@ -2,7 +2,7 @@
 	"name": "BCH Tips",
 	"description": "Send Bitcoin Cash tips on social media easily and securely.",
 	"manifest_version": 2,
-	"version": "1.0.9.5",
+	"version": "1.0.9.6",
 	"icons": {
 		"128": "img/icon.png"
 	},
