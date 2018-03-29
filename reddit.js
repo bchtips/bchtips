@@ -286,30 +286,30 @@ function sendTipClicked(d){
 				n.insertAdjacentHTML('beforeend','<div id="bchtip_div'+id+'" class="bchtip_div bchtip_div_top" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'" data-top="1"></div>');
 			} else n.insertAdjacentHTML('afterend','<div id="bchtip_div'+id+'" class="bchtip_div" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'"></div>'); // todo: get margin-left of child and match it on .bchtip_div
 			document.getElementById('bchtip_div'+id).innerHTML+='<img src="https://cdn.bchftw.com/bchtips/bchtips.png" class="bchtip_logo"><span id="bchtip_loading'+id+'"><img class="bchtip_load" src="https://cdn.bchftw.com/bchtips/bchload.gif" class="bchtip_load"></span><br>';
-			var x0=new XMLHttpRequest(); x0.open("GET","https://www.reddit.com/user/"+a,true);
-			var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+a[0].toLowerCase()+".csv",true);
+			var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/user/"+a,true);
+			var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+a[0].toLowerCase()+".csv",true);
 			if(document.getElementsByClassName('bchtip_div').length==1) var dorate=1; else dorate=false; // only load rate+utxos on first tip open, else intervals running
 			if(dorate){ // also do utxos
-				var x2=new XMLHttpRequest(); x2.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
-				var x3=new XMLHttpRequest(); x3.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo",true);
-				var x4=new XMLHttpRequest(); x4.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
+				var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
+				var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo",true);
+				var x4=new XMLHttpRequest(); x4.timeout=15000; x4.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
 				var xs=[x0,x1,x2,x3,x4];
 			} else var xs=[x0,x1];
 			onRequestsComplete(xs, function(xr, xerr){
 				if(debug){ console.log('xs='); console.log(xs); }
+				if(x4) try { var fr=JSON.parse(x4.responseText)["2"]; } catch(e){}
 				for(let i=0;i<xs.length;i++){
-					if((xs[i].status!==200 || (i!==1 && xs[i].responseText=='') || (i==0 && xs[i].responseText.indexOf('user/'+a)===-1)) && !(i==0 && xs[i].responseText.indexOf('u/'+a+': page not found')>-1)){
-						if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database'; else if(i==2) var m='getting BCH price'; else if(i==3) var m='checking utxos';
-						document.getElementById('bchtip_loading'+id).innerHTML='<span class="bchtip_error">Error '+m+'. <a class="bchtip_error" href="javascript:for(i=0;i<2;i++) document.getElementById(\'bchtip'+id+'\').click();">try again</a></span>';
+					if((xs[i].status!==200 || (i!==1 && xs[i].responseText=='') || (i==0 && xs[i].responseText.indexOf('user/'+a)===-1) || (i==4 && fr==-1)) && !(i==0 && xs[i].responseText.indexOf('u/'+a+': page not found')>-1)){
+						if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database'; else if(i==2) var m='getting BCH price'; else if(i==3) var m='getting utxos'; else if(i==3) var m='getting fee estimate';
+						document.getElementById('bchtip_loading'+id).innerHTML='<span class="bchtip_error">Error '+m+'. This should be temporary. <a class="bchtip_error" href="javascript:for(i=0;i<2;i++) document.getElementById(\'bchtip'+id+'\').click();">try again</a></span>';
 						if(debug) console.log('error '+m);
 						return;
 					}
 				}
 				var uaddr='';
-				var e=document.createElement('html');
-				e.innerHTML=x0.responseText;
-				var d=e.getElementsByClassName("ProfileSidebar__description");
-				if(d.length>0){ // legacy profiles have no description
+				if(x0.responseText.indexOf('ProfileSidebar__description')!==-1){
+					var e=document.createElement('html');
+					e.innerHTML=x0.responseText;
 					var d=e.getElementsByClassName("ProfileSidebar__description")[0].innerHTML;
 					d=d.replace('\\n','').split(' ');
 					for(i=d.length;i>=0;i--) try { if(bchaddr.isCashAddress(d[i])==true) uaddr=d[i].replace('bitcoincash:',''); } catch(e){}
@@ -338,15 +338,15 @@ function sendTipClicked(d){
 						return;
 					}
 					parseUtxos(x3.responseText,1); // also calcs balance, 1=dont update all open tips
-					try { var f=JSON.parse(x4.responseText)["2"]; } catch(e){}
-					if(!x4.responseText || isNaN(f)){
+					if(!x4.responseText || isNaN(fr)){
 						document.getElementById('bchtip_div'+id).innerHTML+='<span class="bchtip_error"> Error getting fee estimate</span><br>';
 						if(debug){ console.log('bchtips_estimate_error x[4] response='); console.log(x4.responseText); }
 						return;
 					}
-					var f=Math.ceil(f*10000000)/100; // round up to nearest 10 sat/kb
-					if(debug) console.log('fee estimate='+f+' sat/B');
-					document.getElementById('bchtip_globals').setAttribute('data-fee',f);
+					var fr=Math.ceil(fr*10000000)/100; // round up to nearest 10 sat/kb
+					if(fr<1){ if(debug) console.log('fee lower than 1. setting to 1.1'); fr=1.1; }
+					if(debug) console.log('fee estimate='+fr+' sat/B');
+					document.getElementById('bchtip_globals').setAttribute('data-fee',fr);
 				}
 				if(document.getElementsByClassName('usertext cloneable warn-on-unload').length==0) document.getElementById('bchtip_div'+id).setAttribute('data-noreply',1); // reply not avail
 				var bal=document.getElementById('bchtip_globals').getAttribute('data-balance');
@@ -438,7 +438,7 @@ function sendTipClicked(d){
 						// refresh utxos? they're 21s fresh anyway..
 						var x=new XMLHttpRequest();
 						x.open("POST","https://blockdozer.com/insight-api/tx/send",true);
-						x.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+						x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
 						x.onreadystatechange=function(){
 							if(x.readyState==4){
 								if(x.status==200){
@@ -555,6 +555,7 @@ function updateRate(){
 		} else {
 			chrome.storage.sync.set({'rate_last_time':Date.now()});
 			var x=new XMLHttpRequest();
+			x.timeout=15000;
 			x.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 			x.onreadystatechange=function(){
 				if(x.readyState==4){
@@ -584,6 +585,7 @@ function updateUtxos(){
 		//if(debug){ console.log('o(data)='); console.log(o); }
 		if(!o.data || !o.data.waddr){ if(debug) console.log('no wallet, aborting'); return; }
 		var x=new XMLHttpRequest();
+		x.timeout=15000;
 		x.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo");
 		x.onreadystatechange=function(){
 			if(x.readyState==4){

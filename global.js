@@ -1,4 +1,4 @@
-var debug='';
+var debug='1';
 // multi sync ajax https://stackoverflow.com/a/34570288
 function requestsAreComplete(requests) {
     return requests.every(function (request) {

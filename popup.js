@@ -4,15 +4,18 @@ var waddr='';
 var wleg='';
 var sitestatus='';
 
-function balDisplay(b,u,r){
+function balDisplay(b,u,r){ // bal, unconfirmed bal, rate
+	document.getElementById('bal_wrap').innerHTML='Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd">&nbsp;</div>';
 	document.getElementById('wbal').innerHTML=parseFloat(b).toFixed(8)+' BCH<br>';
 	if(b>0) document.getElementById('wbal_usd').innerHTML=' ($'+parseFloat(r*b).toFixed(2)+' USD)<br>';
 	if(u!=0){
+		document.getElementById('bal_wrap').innerHTML+='<span id="wbalu"></span><span id="wbalu_usd"></span><br>';
 		if(u>0) var sign='+'; else var sign='';
 		document.getElementById('wbalu').innerHTML=sign+parseFloat(u).toFixed(8)+' BCH ';
 		if(u<0) uu=u*-1; else uu=u;
 		document.getElementById('wbalu_usd').innerHTML=' ($'+parseFloat(r*uu).toFixed(2)+' USD)<br>';
 	}
+	document.getElementById('bal_wrap').innerHTML+='<br><div id="status"></div>';
 	if((b==0 && u<=0) || b+u<=0) document.getElementById('status').innerHTML='Fund your address to start tipping!'; else document.getElementById('status').innerHTML=sitestatus;
 }
 		
@@ -25,16 +28,17 @@ function updateBalance(){
 		balDisplay(localStorage.getItem('lastbal'),localStorage.getItem('lastbalu'),localStorage.getItem('lastrate'));
 		return;
 	}
-	var x0=new XMLHttpRequest(); x0.open("GET","https://blockdozer.com/insight-api/addr/"+waddr,true);
-	var x1=new XMLHttpRequest(); x1.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
+	
+	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://blockdozer.com/insight-api/addr/"+waddr,true);
+	var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 	var xs=[x0,x1];
 	onRequestsComplete(xs, function(xr, xerr){
 		try { var resp=JSON.parse(x0.responseText); } catch(e){}
 		var rate=x1.responseText.trim();
 		for(let i=0;i<xs.length;i++){
 			if(xs[i].status!==200 || xs[i].responseText=='' || isNaN(resp.balance) || isNaN(rate)){
-				if(i==0) var m='getting address balance'; else if(i==1) var m='getting BCH price';
-				document.getElementById('wbal').innerHTML='<span id="wbal_error">Error '+m+'.</span>';
+				if(i==0) var m='Error getting balance. Site seems down.<br>This should be temporary.'; else if(i==1) var m='Error getting BCH/USD price.<br>This should be temporary.';
+				document.getElementById('bal_wrap').innerHTML='<span id="wbal_error">'+m+'</span>';
 				if(debug){ console.log('error '+m+' xs='); console.log(xs); }
 				return;
 			}
@@ -99,8 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl=bitcoincash:'+waddr+'"><br></span></span><span id="wleg_wrap" style="display:none">'+wleg+'<br><span id="wlegqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+wleg+'"><br></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/insight/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
 				//document.body.innerHTML+='Key:<br>'+obj.data.wkey+'<br><br>';
-				document.body.innerHTML+='Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd"></div><span id="wbalu"></span><span id="wbalu_usd"></span><br><span id="status"></span><br><br>';
-				
+				document.body.innerHTML+='<div id="bal_wrap">Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd">&nbsp;</div>';
 				footer();
 				updateBalance();
 				setInterval(updateBalance,15000);
