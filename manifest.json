@@ -2,7 +2,7 @@
 	"name": "BCH Tips",
 	"description": "Send Bitcoin Cash tips on social media easily and securely.",
 	"manifest_version": 2,
-	"version": "1.0.9.6",
+	"version": "1.0.9.7",
 	"icons": {
 		"128": "img/icon.png"
 	},
@@ -25,6 +25,6 @@
 	"web_accessible_resources": ["tx.html"],
 	"background": {
 		"scripts": ["lib/bignumber.min.js","lib/bchaddrjs-0.2.0.min.js","lib/bitcoincash-0.1.10.min.js","lib/chrome-Storage-largeSync.min.js","lib/lz-string.min.js","global.js","event.js"],
-		"persistent": false
+		"persistent": true
 	}
 }

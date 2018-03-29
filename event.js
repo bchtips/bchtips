@@ -57,9 +57,26 @@ chrome.notifications.onClosed.addListener(function(id,bu){
 	});
 });
 
+
+if(debug){
+	var m=new SpeechSynthesisUtterance('event page loaded');
+	speechSynthesis.speak(m);
+	chrome.runtime.onSuspend.addListener(function(a){
+		var m=new SpeechSynthesisUtterance('suspending event page');
+		speechSynthesis.speak(m);
+	});
+	chrome.runtime.onSuspendCanceled.addListener(function(a){
+		var m=new SpeechSynthesisUtterance('suspend canceled');
+		speechSynthesis.speak(m);
+	});
+}
+
+
+
 // tries to send up to ~250 queued tips every 60m
 // 14s between requests to profile page and bchtips database
 var evg={si:'',serr:0,nl:{},item:'',lastd:0,start:Date.now(),locktime:3570000,afreqm:10,pertryms:14000,senttxids:{}};
+
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 
@@ -96,6 +113,8 @@ function afterDOMLoaded(){
 	
 	// send current item
 	function send(){
+		//chrome.runtime.getBackgroundPage(function(a){ });
+		if(debug){ var m=new SpeechSynthesisUtterance('trying to send'); speechSynthesis.speak(m); }
 		if(debug){ console.log('send() evg='); console.log(evg); }
 		if(!evg.si) evg.si=setInterval(function(){ send(); },evg.pertryms);
 		if(Date.now()-evg.start>evg.locktime){
@@ -122,6 +141,7 @@ function afterDOMLoaded(){
 					for(var i=0;i<o.tx_queue.length;i++) if(o.tx_queue[i][0]>evg.lastd){ found=1; evg.item=o.tx_queue[i]; evg.lastd=evg.item[0]; break; }
 					if(!found){
 						if(debug) console.log('no item found newer than '+evg.lastd+'. all done');
+						if(debug){ var m=new SpeechSynthesisUtterance('all done'); speechSynthesis.speak(m); }
 						clearInterval(evg.si); evg.si='';
 						return;
 					} else if(debug) console.log('item='+evg.item.join(' '));
@@ -164,7 +184,7 @@ function afterDOMLoaded(){
 							}, {});
 							if(ar[evg.item[2]]) uaddr=ar[evg.item[2]];
 						}
-						if(!uaddr){ if(debug) console.log('no user address, abort'); return; }
+						if(!uaddr){ if(debug){ var m=new SpeechSynthesisUtterance('no address found'); speechSynthesis.speak(m); } if(debug) console.log('no user address, abort'); return; }
 				
 						// got an address, get utxos and fee estimate
 						if(!df.fee || !df.fee.last || !df.fee.val || (Date.now()-df.fee.last>60000)) var dofee=1; else var dofee='';
