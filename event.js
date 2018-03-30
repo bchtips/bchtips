@@ -244,8 +244,8 @@ function afterDOMLoaded(){
 														return;
 													}
 													if(debug) console.log('sent '+evg.item[1]+' to '+evg.item[2]+ '. tx='+r.txid);
-													var m=new SpeechSynthesisUtterance('Tip sent');
-													speechSynthesis.speak(m);
+													//var m=new SpeechSynthesisUtterance('Tip sent');
+													//speechSynthesis.speak(m);
 													if(evg.item[5]=='r') var st='Reddit';
 													chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+evg.item[1]+' sent to '+evg.item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
 															// add to listener object
@@ -297,8 +297,8 @@ function afterDOMLoaded(){
 								if(tx.msg=='insufficient funds'||tx.msg=='no utxos'){
 									chrome.notifications.getAll(function(n){
 										if(!n.need_funds){
-											var m=new SpeechSynthesisUtterance('insufficient funds');
-											speechSynthesis.speak(m);
+											//var m=new SpeechSynthesisUtterance('insufficient funds');
+											//speechSynthesis.speak(m);
 											chrome.notifications.create('need_funds',{'type':'basic','iconUrl':'img/icon.png','title':'Fund your wallet','message':'Pending tips can\'t be sent due to insufficient funds.','requireInteraction':true},function(){});
 										}
 									});
