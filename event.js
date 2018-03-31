@@ -38,6 +38,17 @@ chrome.runtime.onInstalled.addListener(function(details){
    			}
 		}
 	});
+	// v1.0.9.9 to 1.0.10 update
+	// change tx_attempts local to sync
+	if(details.previousVersion=='1.0.9.9'){
+		chrome.storage.local.get('tx_attempts',function(at){
+			if(!at || !at.tx_attempts) return;
+			chrome.storage.largeSync.set({tx_attempts:at.tx_attempts});
+			chrome.storage.local.remove('tx_attempts');
+		});
+	}
+	// clean up notifs
+	chrome.storage.local.remove('notifs');
 });
 
 chrome.contextMenus.removeAll();
@@ -82,7 +93,7 @@ if(debug){
 
 // tries to send up to ~250 queued tips every 60m
 // 14s between requests to profile page and bchtips database
-var evg={si:'',serr:0,nl:{},item:'',lastd:0,start:Date.now(),locktime:3570000,afreqm:10,pertryms:14000,senttxids:{}};
+var evg={si:'',serr:0,nl:{},item:'',lastd:0,start:Date.now(),locktime:3570000,afreqm:10,pertryms:14000};
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
@@ -96,22 +107,21 @@ function afterDOMLoaded(){
 		if(debug) setTimeout(function(){ chrome.alarms.getAll(function(a){ console.log('alarms='); console.log(a); }); },1000);
 	});
 	
-	// init, check lock
+	// init
 	function txqInit(){
 		if(debug) console.log('txqInit() '+Date.now());
-		chrome.storage.sync.get(['txq_lock'],function(o){
-			if(o.txq_lock){
-				var la=Date.now()-o.txq_lock;
-				if(la>evg.locktime) var le=1; else var le=''; // ~1hr
-			} else var le='';
-			if(!o || !o.txq_lock || le){
-				if(debug) if(le) console.log('lock expired (set '+la+' ago), setting and sending'); else console.log('no lock, setting and sending');
-				chrome.storage.sync.set({'txq_lock':Date.now()});
-				evg.serr=0,evg.item='',evg.lastd=0,evg.start=Date.now(),evg.senttxids={}; // reset when page isnt reloaded
+		chrome.storage.largeSync.get(['txq_lastrun'],function(o){
+			var dorun='';
+			if(!o || !o.txq_lastrun){ o={}; o.txq_lastrun=Date.now()-evg.locktime; }
+			var lr=Date.now()-o.txq_lastrun;
+			if(lr>=evg.locktime) dorun=1;;
+			if(dorun){
+				if(debug) console.log('last run '+lr+' ago. running now');
+				chrome.storage.largeSync.set({txq_lastrun:Date.now()});
+				evg.item='',evg.lastd=0,evg.start=Date.now(); // reset
 				send();
 			} else {
-				if(debug) console.log('lock found ('+la+'/'+evg.locktime+'), not sending');
-				// if crash or reinstall lock will be set until expiry - cant detect particular browser
+				if(debug) console.log('last run '+lr+' ago. not time to run');
 			}
 		});
 	}
@@ -133,11 +143,10 @@ function afterDOMLoaded(){
 			if(!df.data || !df.data.waddr || !df.data.wkey){
 				if(debug) console.log('no wallet addr/key set. aborting'); // todo: notify
 				clearInterval(evg.si); evg.si='';
-				//chrome.storage.sync.set({'txq_lock':''});
 				return;
 			}
 			// check if items in queue
-			chrome.storage.largeSync.get(['tx_queue'],function(o){
+			chrome.storage.largeSync.get(['tx_queue','tx_attempts'],function(o){
 				//if(debug){ console.log('ls o='); console.log(o); }
 				if(o && o.tx_queue && o.tx_queue.length>0){
 					if(debug && evg.lastd==0){ console.log('queue items='); console.log(o.tx_queue); }
@@ -150,179 +159,9 @@ function afterDOMLoaded(){
 						clearInterval(evg.si); evg.si='';
 						return;
 					} else if(debug) console.log('item='+evg.item.join(' '));
-
-					// update last attempt time
-					chrome.storage.local.get('tx_attempts',function(ta){
-						if(!ta || !ta.tx_attempts){ ta={}; ta.tx_attempts={}; }
-						ta.tx_attempts[evg.item[0]]=Date.now();
-						chrome.storage.local.set({tx_attempts:ta.tx_attempts});
-						for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshAgo(evg.item[0],ta.tx_attempts[evg.item[0]]);
-															
-						if(debug){ var m=new SpeechSynthesisUtterance('trying to send to '+evg.item[2]); speechSynthesis.speak(m); }
-	
-						// first, just get user address
-						var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/user/"+evg.item[2],true);
-						var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+evg.item[2][0].toLowerCase()+".csv",true);
-						var xs0=[x0,x1];
-						onRequestsComplete(xs0, function(xr, xerr){
-							//if(debug){ console.log('xs0='); console.log(xs0); }
-							// check for error
-							for(let i=0;i<xs0.length;i++){
-								if((xs0[i].status!==200 || (i!==1 && xs0[i].responseText=='') || (i==0 && xs0[i].responseText.indexOf('user/'+evg.item[2])===-1)) && !(i==0 && xs0[i].responseText.indexOf('u/'+evg.item[2]+': page not found')>-1)){
-									if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database';
-									if(debug){ console.log('error '+m+'. xs0='); console.log(xs0); }
-									evg.serr++;
-									if(evg.serr>2){
-										if(debug) console.log('too many errors. abort (0)');
-										clearInterval(evg.si); evg.si='';
-										return;
-									}
-									return;
-								}
-							}
-							// check if got an address
-							var uaddr='';
-							if(x0.responseText.indexOf('ProfileSidebar__description')!==-1){
-								var e=document.createElement('html');
-								e.innerHTML=x0.responseText;
-								var d=e.getElementsByClassName("ProfileSidebar__description")[0].innerHTML;
-								d=d.replace('\\n','').split(' ');
-								for(i=d.length;i>=0;i--) try { if(bchaddr.isCashAddress(d[i])==true) uaddr=d[i].replace('bitcoincash:',''); } catch(e){}
-							}
-							// no addr from profile, check db response
-							if(!uaddr){
-								let ar=x1.responseText.split('\n').reduce(function(obj,str,index){
-									let part=str.split(',');
-									if(part[0] && part[1]) obj[part[0]]=part[1].trim();
-									return obj;
-								}, {});
-								if(ar[evg.item[2]]) uaddr=ar[evg.item[2]];
-							}
-							if(!uaddr){ if(debug){ var m=new SpeechSynthesisUtterance('no address found'); speechSynthesis.speak(m); } if(debug) console.log('no user address, abort'); return; }
 					
-							// got an address, get utxos and fee estimate
-							if(!df.fee || !df.fee.last || !df.fee.val || (Date.now()-df.fee.last>60000)) var dofee=1; else var dofee='';
-							var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://blockdozer.com/insight-api/addr/"+df.data.waddr+"/utxo",true);
-							if(dofee){
-								if(debug) console.log('updating fee');
-								var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
-								var xs1=[x2,x3];
-							} else var xs1=[x2];
-							onRequestsComplete(xs1, function(xr, xerr){
-								//if(debug){ console.log('xs1='); console.log(xs1); }
-								if(x3) try { var fr=JSON.parse(x3.responseText)["2"]; } catch(e){}
-								for(let i=0;i<xs1.length;i++){
-									if(xs1[i].status!==200 || xs1[i].responseText=='' || (i==3 && fr==-1)){
-										if(i==2) var m='checking utxos'; else if(i==3) var m='updating fee estimate';
-										if(debug){ console.log('error '+m+' xs1='); console.log(xs1); }
-										evg.serr++;
-										if(evg.serr>2){
-											if(debug) console.log('too many errors. abort (1)');
-											clearInterval(evg.si); evg.si='';
-											return;
-										}
-										return;
-									}
-								}
-								evg.serr=0;
-								if(dofee){
-									fr=Math.ceil(fr*10000000)/100; // round up to nearest 10 sat/kb
-									ferr=0;
-									chrome.storage.sync.set({'fee':{ last: Date.now(), val: fr }});
-								} else fr=df.fee.val;
-								if(fr<1){ if(debug) console.log('fee lower than 1. setting to 1.1'); fr=1.1; }
-								//if(debug) console.log('fee estimate='+fr+' sat/B');
-								//if(debug) console.log('got everything we need. time to send.');
-								//if(debug) console.log('creating tx');
-								var amt=parseFloat(BigNumber(evg.item[1].split(' ')[0]).times(100000000).toFixed(0));
-								//if(debug) console.log('amt='+amt);
-								var tx=makeTx(x2.responseText,df.data.waddr,df.data.wkey,uaddr,amt,fr);
-								//if(debug){ console.log('tx='); console.log(tx); }
-								if(tx.status==1){
-									//if(debug) console.log('sending tx');
-									var x=new XMLHttpRequest();
-									x.open("POST","https://blockdozer.com/insight-api/tx/send",true);
-									x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-									x.onreadystatechange=function(){
-										if(x.readyState==4){
-											if(x.status==200){
-												if(debug) console.log('x.responseText='+x.responseText);
-												if(x.responseText){
-													try { var r=JSON.parse(x.responseText); } catch(e){}
-													//if(debug){ console.log('r='); console.log(r); }
-													// add to tx_sent
-													if(r.txid){
-														if(evg.senttxids[r.txid]){
-															// wasn't really accepted - can happen if two tips for same amount to same user before confirmation
-															if(debug) console.log('duplicate txid received ('+r.txid+') - wasn\'t really sent, skipping for now');
-															return;
-														}
-														if(debug) console.log('sent '+evg.item[1]+' to '+evg.item[2]+ '. tx='+r.txid);
-														if(debug){ var m=new SpeechSynthesisUtterance('Tip sent'); speechSynthesis.speak(m); }
-														if(evg.item[5]=='r') var st='Reddit';
-														chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+evg.item[1]+' sent to '+evg.item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
-																// add to listener object
-																chrome.storage.local.get('notifs',function(on){
-																	on.notifs[id]=['https://www.reddit.com'+evg.item[3],'https://blockdozer.com/insight/tx/'+r.txid];
-																	//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
-																	chrome.storage.local.set({notifs:on.notifs});
-																});
-														});
-														// remove from tx_queue
-														chrome.storage.largeSync.get(['tx_queue'],function(oq){
-															for(var i=0;i<oq.tx_queue.length;i++) if(oq.tx_queue[i][0]==evg.item[0]){
-																oq.tx_queue.splice(i,1);
-																chrome.storage.largeSync.set(oq);
-																break;
-															}
-														});
-														// add to tx_sent
-														chrome.storage.largeSync.get(['tx_sent'],function(os){
-															//if(debug){ console.log('ls os='); console.log(os); }
-															if(!os || !os.tx_sent){ os={}; os.tx_sent=[]; }
-															os.tx_sent.push([Date.now(),evg.item[1],evg.item[2],evg.item[3],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
-															if(os.tx_sent.length>250){ while(1){ os.tx_sent.shift(); if(os.tx_sent.length<=250) break; } }
-															chrome.storage.largeSync.set(os);
-														});
-														// refresh tx pages
-														setTimeout(function(){
-															for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshData();
-														},2000);
-														evg.senttxids[r.txid]=1;
-													} else senderr=1;
-												} else var senderr=1;
-											} else var senderr=1;
-										}
-										if(senderr){
-											if(x.responseText.indexOf('txn-mempool-conflict')!==-1){
-												// retry
-												if(debug) console.log('mempool conflict (waiting for new utxo), retrying');
-												evg.lastd=evg.item[0]-1;
-												return;
-											}
-											if(debug){ console.log('send error. r='+x.responseText+' x='); console.log(x); }
-										}
-									}
-									x.send('rawtx='+tx.tx);
-								} else {
-									// insufficient funds or other
-									if(debug){ console.log('error'); console.log(tx); }
-									if(tx.msg=='insufficient funds'||tx.msg=='no utxos'){
-										chrome.notifications.getAll(function(n){
-											if(!n.need_funds){
-												if(debug){ var m=new SpeechSynthesisUtterance('insufficient funds'); speechSynthesis.speak(m); }
-												chrome.notifications.create('need_funds',{'type':'basic','iconUrl':'img/icon.png','title':'Fund your wallet','message':'Pending tips can\'t be sent due to insufficient funds.','requireInteraction':true},function(){});
-											}
-										});
-										clearInterval(evg.si); evg.si='';
-										return;
-									}
-								}
-							});
-							x2.send(); if(dofee) x3.send();
-						});
-						x0.send(); x1.send();
-					});
+					var r=sendQueued([df,o,evg.item,1],function(cb){ if(debug){ console.log('cb='); console.log(cb); } });
+					
 				} else {
 					if(debug) console.log('no items to send');
 					clearInterval(evg.si); evg.si='';
@@ -330,11 +169,5 @@ function afterDOMLoaded(){
 				}
 			});
 		});
-	
-	}
-	
-	// finish up
-	function alldone(){
-		// remove items not in tx_queue from tx_tocancel
 	}
 }

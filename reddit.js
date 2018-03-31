@@ -307,6 +307,7 @@ function sendTipClicked(d){
 					}
 				}
 				var uaddr='';
+				if(debug){ console.log('x0.responseText='); console.log(x0.responseText); }
 				if(x0.responseText.indexOf('ProfileSidebar__description')!==-1){
 					var e=document.createElement('html');
 					e.innerHTML=x0.responseText;

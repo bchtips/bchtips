@@ -11,16 +11,15 @@
 - enable site field when add more sites
 
 ## options page (todo)
+- configurable polling for updated users rate
 - automatically append suggested text to reply, if available (no automatic pms due to captcha?)
 - automatically submit comment reply
 - add txid to reply or pm
 - notifications enabled
-- notification persistence
-- text to speech or sounds (custom?) enabled
 
 ## event.js
 - dont set alarm until first tip queued
-- transaction attempt log
+- periodic polling for updated users
 
 ## misc
 - get and sync feerate globally only every 60s
