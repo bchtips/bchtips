@@ -148,7 +148,7 @@ function updateTip(id){
 	if(!document.getElementById('bchtip_uaddr'+id).value) var noaddr=1; else var noaddr='';
 	document.getElementById('bchtip_send'+id).disabled=true;
 	document.getElementById('bchtip_tx'+id).value='';
-	chrome.storage.sync.get(['data'],function(o){
+	chrome.storage.largeSync.get(['data'],function(o){
 		if(o.data && o.data.waddr && o.data.wkey){
 			if(document.getElementById('bchtip_unit'+id).value=='all') var a=parseFloat(unitToSat(document.getElementById('bchtip_globals').getAttribute('data-balance'),'bch')); else var a=parseFloat(getSatAmt(id));
 			if(!a || a==0 || isNaN(a)){
@@ -274,7 +274,7 @@ function sendTipClicked(d){
 	var id=d[0],a=d[1],u=d[2];
 	if(debug) console.log('id='+id+' a='+a+' u='+u);
 	// load storage, then multi ajax
-	chrome.storage.sync.get(['data','lastsend'],function(o){
+	chrome.storage.largeSync.get(['data','lastsend'],function(o){
 		if(debug){ console.log('o='); console.log(o); }
 		if(document.getElementById('bchtip_div'+id)){ document.getElementById('bchtip_div'+id).outerHTML=''; document.getElementById('bchtip'+id).innerHTML='send tip'; return; }  // collapse if open
 		if(o.data && o.data.waddr){
@@ -286,7 +286,7 @@ function sendTipClicked(d){
 				n.insertAdjacentHTML('beforeend','<div id="bchtip_div'+id+'" class="bchtip_div bchtip_div_top" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'" data-top="1"></div>');
 			} else n.insertAdjacentHTML('afterend','<div id="bchtip_div'+id+'" class="bchtip_div" data-id="'+id+'" data-author="'+a+'" data-url="'+u+'"></div>'); // todo: get margin-left of child and match it on .bchtip_div
 			document.getElementById('bchtip_div'+id).innerHTML+='<img src="https://cdn.bchftw.com/bchtips/bchtips.png" class="bchtip_logo"><span id="bchtip_loading'+id+'"><img class="bchtip_load" src="https://cdn.bchftw.com/bchtips/bchload.gif" class="bchtip_load"></span><br>';
-			var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/user/"+a,true);
+			var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/r/u_"+a+"/about.json",true);
 			var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+a[0].toLowerCase()+".csv",true);
 			if(document.getElementsByClassName('bchtip_div').length==1) var dorate=1; else dorate=false; // only load rate+utxos on first tip open, else intervals running
 			if(dorate){ // also do utxos
@@ -297,9 +297,12 @@ function sendTipClicked(d){
 			} else var xs=[x0,x1];
 			onRequestsComplete(xs, function(xr, xerr){
 				if(debug){ console.log('xs='); console.log(xs); }
+				var ujserr='';
+				try { var ujs=JSON.parse(x0.responseText); } catch(e){ ujserr=1; }
+				if(debug){ console.log('x0.responseText length='+x0.responseText.length+' ujs='); console.log(ujs); }
 				if(x4) try { var fr=JSON.parse(x4.responseText)["2"]; } catch(e){}
 				for(let i=0;i<xs.length;i++){
-					if((xs[i].status!==200 || (i!==1 && xs[i].responseText=='') || (i==0 && xs[i].responseText.indexOf('user/'+a)===-1) || (i==4 && fr==-1)) && !(i==0 && xs[i].responseText.indexOf('u/'+a+': page not found')>-1)){
+					if((xs[i].status!==200 || (i!==1 && xs[i].responseText=='') || (i==0 && (!ujs.data || !'public_description' in ujs.data) && ujs.kind!='Listing') || (i==0 && ujserr) || (i==4 && fr==-1))){
 						if(i==0) var m='checking reddit profile'; else if(i==1) var m='checking user database'; else if(i==2) var m='getting BCH price'; else if(i==3) var m='getting utxos'; else if(i==3) var m='getting fee estimate';
 						document.getElementById('bchtip_loading'+id).innerHTML='<span class="bchtip_error">Error '+m+'. This should be temporary. <a class="bchtip_error" href="javascript:for(i=0;i<2;i++) document.getElementById(\'bchtip'+id+'\').click();">try again</a></span>';
 						if(debug) console.log('error '+m);
@@ -307,13 +310,12 @@ function sendTipClicked(d){
 					}
 				}
 				var uaddr='';
-				if(debug){ console.log('x0.responseText='); console.log(x0.responseText); }
-				if(x0.responseText.indexOf('ProfileSidebar__description')!==-1){
-					var e=document.createElement('html');
-					e.innerHTML=x0.responseText;
-					var d=e.getElementsByClassName("ProfileSidebar__description")[0].innerHTML;
-					d=d.replace('\\n','').split(' ');
-					for(i=d.length;i>=0;i--) try { if(bchaddr.isCashAddress(d[i])==true) uaddr=d[i].replace('bitcoincash:',''); } catch(e){}
+				//if(debug){ console.log('x0.responseText='); console.log(x0.responseText); }
+				if(ujs.data.public_description && ujs.kind=='t5'){
+					var tmp=ujs.data.public_description.replace('\\n','').split(' ');
+					console.log('ujs.data.public_description='+tmp);
+					for(i=tmp.length;i>=0;i--) try { if(bchaddr.isCashAddress(tmp[i])==true) uaddr=tmp[i].replace('bitcoincash:',''); } catch(e){}
+					if(uaddr&&debug) console.log('got address from public description: '+uaddr);
 				}
 				// no addr from profile, check db response
 				if(!uaddr){
@@ -432,7 +434,7 @@ function sendTipClicked(d){
 					// set and expand suggested msg
 					showReplyText(b1,id);
 					// send
-					chrome.storage.sync.set({'lastsend':{'amt':document.getElementById('bchtip_amt'+id).value,'unit':document.getElementById('bchtip_unit'+id).value}});
+					chrome.storage.largeSync.set({lastsend:{amt:document.getElementById('bchtip_amt'+id).value,unit:document.getElementById('bchtip_unit'+id).value}});
 					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
 						var tx=document.getElementById('bchtip_tx'+id).value; // todo: store rate with tx to prevent bchtousd (above) race
 						if(debug) console.log('sending tx='+tx);
@@ -547,14 +549,14 @@ function addTipLinks(e){
 function updateRate(){
 	// only if no update recently, due to multi-tabs
 	if(debug) console.log('bchtips updateRate()');
-	chrome.storage.sync.get(['rate_last_time','rate_last_value'],function(o){
+	chrome.storage.largeSync.get(['rate_last_time','rate_last_value'],function(o){
 		//if(debug){ console.log('o='); console.log(o); }
 		var now=Date.now();
 		if(o.rate_last_time && now-o.rate_last_time<20500){ // <21s
 			if(debug) console.log('not time to update rate, stored rate='+o.rate_last_value);
 			document.getElementById('bchtip_globals').setAttribute('data-rate',o.rate_last_value);
 		} else {
-			chrome.storage.sync.set({'rate_last_time':Date.now()});
+			chrome.storage.largeSync.set({rate_last_time:Date.now()});
 			var x=new XMLHttpRequest(); x.timeout=15000;
 			x.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 			x.onreadystatechange=function(){
@@ -564,7 +566,7 @@ function updateRate(){
 						if(debug) console.log('rate='+x.responseText);
 						if(x.responseText){
 							if(!isNaN(x.responseText)){
-								chrome.storage.sync.set({'rate_last_value':x.responseText});
+								chrome.storage.largeSync.set({rate_last_value:x.responseText});
 								document.getElementById('bchtip_globals').setAttribute('data-rate',x.responseText);
 							} else var raterr=1;
 						} else var raterr=1;
@@ -581,7 +583,7 @@ var utxos=[];
 function updateUtxos(){
 	// always run on every tab since data may be too large for sync
 	//if(debug) console.log('bchtips updateUtxos()');
-	chrome.storage.sync.get(['data'],function(o){
+	chrome.storage.largeSync.get(['data'],function(o){
 		//if(debug){ console.log('o(data)='); console.log(o); }
 		if(!o.data || !o.data.waddr){ if(debug) console.log('no wallet, aborting'); return; }
 		var x=new XMLHttpRequest();

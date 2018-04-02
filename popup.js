@@ -59,7 +59,7 @@ function footer(){
 
 var valid_site_urls=['https://www.reddit.com'];//,'https://twitter.com/'];
 document.addEventListener('DOMContentLoaded', () => {
-	chrome.storage.sync.get('data',function(obj){
+	chrome.storage.largeSync.get(['data'],function(obj){
 		if(debug) console.log(obj);
 		if(!obj.data || (!obj.data.waddr && !obj.data.wkey)) var error='first'; // no error message
 		if(!error && !obj.data.waddr) var error='noaddr';
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if(isleg){
 			if(debug) console.log('converting to cashaddr..');
 			obj.data.waddr=bchaddr.toCashAddress(obj.data.waddr).substr(12);
-			chrome.storage.sync.set({'data':{ waddr: obj.data.waddr, wkey: obj.data.wkey }});
+			chrome.storage.largeSync.set({data:{ waddr: obj.data.waddr, wkey: obj.data.wkey }});
 		}
 
 		if(!error){
@@ -105,12 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
 				updateBalance();
 				setInterval(updateBalance,15000);
 				// init format
-				chrome.storage.sync.get(['format','showqr'],function(fob){
+				chrome.storage.largeSync.get(['format','showqr'],function(fob){
 					if(!fob.format || fob.format=='c'){
 						document.getElementById('wleg_wrap').style.display='none';
 						document.getElementById('waddr_wrap').style.display='';
 						document.getElementById('frm').innerHTML='Legacy';
-						chrome.storage.sync.set({'format':'c'});
+						chrome.storage.largeSync.set({format:'c'});
 					} else {
 						document.getElementById('waddr_wrap').style.display='none';
 						document.getElementById('wleg_wrap').style.display='';
@@ -131,12 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
 						document.getElementById('wleg_wrap').style.display='none';
 						document.getElementById('waddr_wrap').style.display='';
 						document.getElementById('frm').innerHTML='Legacy';
-						chrome.storage.sync.set({'format':'c'});
+						chrome.storage.largeSync.set({format:'c'});
 					} else {
 						document.getElementById('waddr_wrap').style.display='none';
 						document.getElementById('wleg_wrap').style.display='';
 						document.getElementById('frm').innerHTML='CashAddr';
-						chrome.storage.sync.set({'format':'l'});
+						chrome.storage.largeSync.set({format:'l'});
 					}
 				});
 				document.getElementById('sqr').addEventListener('click',function(){
@@ -144,17 +144,17 @@ document.addEventListener('DOMContentLoaded', () => {
 						document.getElementById('waddrqr').style.display='';
 						document.getElementById('wlegqr').style.display='';
 						document.getElementById('sqr').innerHTML='Hide QR';
-						//chrome.storage.sync.set({'showqr':1});
+						//chrome.storage.largeSync.set({showqr:1});
 					} else {
 						document.getElementById('waddrqr').style.display='none';
 						document.getElementById('wlegqr').style.display='none';
 						document.getElementById('sqr').innerHTML='Show QR';
-						//chrome.storage.sync.set({'showqr':''});
+						//chrome.storage.largeSync.set({showqr:''});
 					}
 				});
 				document.getElementById('rw').addEventListener('click',function(){
 					if(confirm('Are you sure you want to remove the address? If you don\'t have a copy of the private key your funds will be lost!')){
-						chrome.storage.sync.set({'data':{ waddr: '', wkey: '' }});
+						chrome.storage.largeSync.set({data:{ waddr: '', wkey: '' }});
 						location.reload();
 					}
 				});
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				if(obj.data.waddr) localStorage.setItem('waddr',obj.data.waddr);
 				if(obj.data.wkey) localStorage.setItem('wkey',obj.data.wkey);
 			}
-			chrome.storage.sync.set({'data':{ waddr: '', wkey: '' }});
+			chrome.storage.largeSync.set({data:{ waddr: '', wkey: '' }});
 			if(error=='noaddr') document.body.innerHTML+='<div id="error">Please enter an address.</div>';
 			else if(error=='nokey') document.body.innerHTML+='<div id="error">Please enter a key.</div>';
 			else if(error=='invalidaddr'){ document.body.innerHTML+='<div id="error">Not a valid address. Please try again.</div>'; localStorage.setItem('waddr',''); }
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			document.getElementById('add').addEventListener('click',function(){
 				// save wallet infos
-				chrome.storage.sync.set({'data':{ waddr: document.getElementById('waddr').value, wkey: document.getElementById('wkey').value }});
+				chrome.storage.largeSync.set({data:{ waddr: document.getElementById('waddr').value, wkey: document.getElementById('wkey').value }});
 				document.getElementById('waddr').removeEventListener('blur',waddrblur);
 				document.getElementById('wkey').removeEventListener('blur',wkeyblur);
 				localStorage.setItem('waddr','');

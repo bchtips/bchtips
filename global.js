@@ -1,4 +1,22 @@
 var debug='';
+
+// https://stackoverflow.com/a/16187766
+function cmpVersions (a, b) {
+    var i, diff;
+    var regExStrip0 = /(\.0+)+$/;
+    var segmentsA = a.replace(regExStrip0, '').split('.');
+    var segmentsB = b.replace(regExStrip0, '').split('.');
+    var l = Math.min(segmentsA.length, segmentsB.length);
+
+    for (i = 0; i < l; i++) {
+        diff = parseInt(segmentsA[i], 10) - parseInt(segmentsB[i], 10);
+        if (diff) {
+            return diff;
+        }
+    }
+    return segmentsA.length - segmentsB.length;
+}
+
 // multi sync ajax https://stackoverflow.com/a/34570288
 function requestsAreComplete(requests) {
     return requests.every(function (request) {
@@ -68,26 +86,28 @@ function makeTx(utxos,waddr,wkey,toaddr,a,fr){
 
 
 // try to send a queued tip
-// todo: abort if last attempt within X seconds ago; fast local lock in case 2 sends at exact same time
+// todo: fast local lock in case 2 sends at exact same time, i.e. queue + tx page
 function sendQueued(obj,callback){
-	var df=obj[0],o=obj[1],item=obj[2],evp=obj[3]; // todo: improve // evp=is run from event page
+	var o=obj[0],item=obj[1],evp=obj[2]; // todo: improve // evp=is run from event page
 	// update last attempt time
 	if(!o.tx_attempts) o.tx_attempts={};
 	o.tx_attempts[item[0]]=Date.now();
 	for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshAgo(item[0],o.tx_attempts[item[0]]);
-	chrome.storage.largeSync.set({tx_attempts:o.tx_attempts});
-	
+	if(evp) chrome.storage.largeSync.set({tx_attempts:o.tx_attempts,txq_lastattempt:o.tx_attempts[item[0]]}); else chrome.storage.largeSync.set({tx_attempts:o.tx_attempts}); // dont block queue run from tx page
 	if(debug){ var m=new SpeechSynthesisUtterance('trying to send to '+item[2]); speechSynthesis.speak(m); }
 
 	// first, just get user address
-	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/user/"+item[2],true);
+	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/r/u_"+item[2]+"/about.json",true);
 	var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+item[2][0].toLowerCase()+".csv",true);
 	var xs0=[x0,x1];
 	onRequestsComplete(xs0, function(xr, xerr){
 		//if(debug){ console.log('xs0='); console.log(xs0); }
 		// check for error
+		var ujserr='';
+		try { var ujs=JSON.parse(x0.responseText); } catch(e){ ujserr=1; }
+		if(debug){ console.log('x0.responseText length='+x0.responseText.length+' ujs='); console.log(ujs); }
 		for(let i=0;i<xs0.length;i++){
-			if((xs0[i].status!==200 || (i!==1 && xs0[i].responseText=='') || (i==0 && xs0[i].responseText.indexOf('user/'+item[2])===-1)) && !(i==0 && xs0[i].responseText.indexOf('u/'+item[2]+': page not found')>-1)){
+			if(xs0[i].status!==200 || (i!==1 && xs0[i].responseText=='') || (i==0 && (!ujs.data || !'public_description' in ujs.data) && ujs.kind!='Listing') || (i==0 && ujserr)){
 				if(i==0) var m='reddit profile'; else if(i==1) var m='user database';
 				if(debug){ console.log('error checking '+m+'. aborting. xs0='); console.log(xs0); }
 				if(evp){ clearInterval(evg.si); evg.si=''; }
@@ -97,12 +117,11 @@ function sendQueued(obj,callback){
 		}
 		// check if got an address
 		var uaddr='';
-		if(x0.responseText.indexOf('ProfileSidebar__description')!==-1){
-			var e=document.createElement('html');
-			e.innerHTML=x0.responseText;
-			var d=e.getElementsByClassName("ProfileSidebar__description")[0].innerHTML;
-			d=d.replace('\\n','').split(' ');
-			for(i=d.length;i>=0;i--) try { if(bchaddr.isCashAddress(d[i])==true) uaddr=d[i].replace('bitcoincash:',''); } catch(e){}
+		if(ujs.data.public_description && ujs.kind=='t5'){
+			var tmp=ujs.data.public_description.replace('\\n','').split(' ');
+			console.log('ujs.data.public_description='+tmp);
+			for(i=tmp.length;i>=0;i--) try { if(bchaddr.isCashAddress(tmp[i])==true) uaddr=tmp[i].replace('bitcoincash:',''); } catch(e){}
+			if(uaddr&&debug) console.log('got address from public description: '+uaddr);
 		}
 		// no addr from profile, check db response
 		if(!uaddr){
@@ -116,8 +135,8 @@ function sendQueued(obj,callback){
 		if(!uaddr){ if(debug){ var m=new SpeechSynthesisUtterance('no address found'); speechSynthesis.speak(m); } if(debug) console.log('no user address, abort'); callback({neutral:1,m:'no user address',u:item[2]}); return; }
 
 		// got an address, get utxos and fee estimate
-		if(!df.fee || !df.fee.last || !df.fee.val || (Date.now()-df.fee.last>60000)) var dofee=1; else var dofee='';
-		var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://blockdozer.com/insight-api/addr/"+df.data.waddr+"/utxo",true);
+		if(!o.fee || !o.fee.last || !o.fee.val || (Date.now()-o.fee.last>60000)) var dofee=1; else var dofee='';
+		var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo",true);
 		if(dofee){
 			if(debug) console.log('updating fee');
 			var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
@@ -138,15 +157,15 @@ function sendQueued(obj,callback){
 			if(dofee){
 				fr=Math.ceil(fr*10000000)/100; // round up to nearest 10 sat/kb
 				ferr=0;
-				chrome.storage.sync.set({'fee':{ last: Date.now(), val: fr }});
-			} else fr=df.fee.val;
+				chrome.storage.largeSync.set({fee:{ last: Date.now(), val: fr }});
+			} else fr=o.fee.val;
 			if(fr<1){ if(debug) console.log('fee lower than 1. setting to 1.1'); fr=1.1; }
 			//if(debug) console.log('fee estimate='+fr+' sat/B');
 			//if(debug) console.log('got everything we need. time to send.');
 			//if(debug) console.log('creating tx');
 			var amt=parseFloat(BigNumber(item[1].split(' ')[0]).times(100000000).toFixed(0));
 			//if(debug) console.log('amt='+amt);
-			var tx=makeTx(x2.responseText,df.data.waddr,df.data.wkey,uaddr,amt,fr);
+			var tx=makeTx(x2.responseText,o.data.waddr,o.data.wkey,uaddr,amt,fr);
 			//if(debug){ console.log('tx='); console.log(tx); }
 			if(tx.status==1){
 				//if(debug) console.log('sending tx');
@@ -162,48 +181,55 @@ function sendQueued(obj,callback){
 								//if(debug){ console.log('r='); console.log(r); }
 								// add to tx_sent
 								if(r.txid){
-									chrome.storage.largeSync.get(['tx_sent','tx_queue','tx_attempts'],function(ox){
+									chrome.storage.largeSync.get(['tx_sent'],function(ox){
+										if(!ox.tx_sent) ox.tx_sent=[];
 										// check dupe
-										for(var i=0;i<ox.tx_sent.length;i++) if(ox.tx_sent[i][4]==r.txid){
-											if(debug) console.log('duplicate txid '+r.txid+' not really sent, skipping for now');
-											callback({error:1,m:'duplicate txid'});
-											return;
-										}
-										// remove from tx_queue
-										for(var i=0;i<ox.tx_queue.length;i++) if(ox.tx_queue[i][0]==item[0]){
-											ox.tx_queue.splice(i,1);
-											delete ox.tx_attempts[item[0]];
-											break;
+										for(var i=0;i<ox.tx_sent.length;i++){
+											if(ox.tx_sent[i][4]==r.txid){
+												if(debug) console.log('duplicate txid '+r.txid+' not really sent, skipping for now');
+												dupetxid=1;
+												callback({error:1,m:'duplicate txid'});
+												return;
+											}
 										}
 										// add to tx_sent
-										if(!ox.tx_sent) ox.tx_sent=[];
 										ox.tx_sent.push([Date.now(),item[1],item[2],item[3],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
 										if(ox.tx_sent.length>250){ while(1){ ox.tx_sent.shift(); if(ox.tx_sent.length<=250) break; } }
 										chrome.storage.largeSync.set(ox);
-									});
-									if(debug) console.log('sent '+item[1]+' to '+item[2]+ '. tx='+r.txid);
-									if(debug){ var m=new SpeechSynthesisUtterance('Tip sent'); speechSynthesis.speak(m); }
-									if(item[5]=='r') var st='Reddit';
-									if(evp){
+										// remove from tx_queue
+										chrome.storage.largeSync.get(['tx_queue','tx_attempts'],function(ox){
+											if(!ox.tx_queue) ox.tx_queue=[]; if(!ox.tx_attempts) ox.tx_attempts=[];
+											for(var i=0;i<ox.tx_queue.length;i++) if(ox.tx_queue[i][0]==item[0]){
+												ox.tx_queue.splice(i,1);
+												delete ox.tx_attempts[item[0]];
+												break;
+											}
+											chrome.storage.largeSync.set(ox);
+										});
+										if(debug) console.log('sent '+item[1]+' to '+item[2]+ '. tx='+r.txid);
+										if(debug){ var m=new SpeechSynthesisUtterance('Tip sent'); speechSynthesis.speak(m); }
+										if(item[5]=='r') var st='Reddit';
+										if(evp && o.options.bg_sent_notification){
+											setTimeout(function(){
+												chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+item[1]+' sent to '+item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
+														// add to listener object
+														chrome.storage.local.get('notifs',function(on){
+															if(!on || !on.notifs){ on={}; on.notifs={}; }
+															on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/insight/tx/'+r.txid];
+															//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
+															chrome.storage.local.set({notifs:on.notifs});
+														});
+												});
+											},3000); // give it a few secs to add to block explorer
+										}
+										callback({success:1,m:'tip sent',u:item[2]});
+										// hide queued item on tx pages immediately
+										for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].hideQueued(item[0]);
+										// refresh tx pages
 										setTimeout(function(){
-											chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+item[1]+' sent to '+item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
-													// add to listener object
-													chrome.storage.local.get('notifs',function(on){
-														if(!on || !on.notifs){ on={}; on.notifs={}; }
-														on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/insight/tx/'+r.txid];
-														//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
-														chrome.storage.local.set({notifs:on.notifs});
-													});
-											});
-										},3000); // give it a few secs to add to block explorer
-									}
-									callback({success:1,m:'tip sent',u:item[2]});
-									// hide queued item on tx pages immediately
-									for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].hideQueued(item[0]);
-									// refresh tx pages
-									setTimeout(function(){
-										for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshData();
-									},2500);
+											for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshData();
+										},2500);
+									});
 								} else senderr=1;
 							} else var senderr=1;
 						} else var senderr=1;
