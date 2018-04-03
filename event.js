@@ -10,8 +10,6 @@ function executeScripts(tabId,injectDetailsArray){
 	if (callback !== null) callback(); // execute outermost function
 }
 
-//getItemProcessing(function(ip){ if(ip) setItemProcessing('',function(){}); // todo: clear here if needed
-
 // Defer update until clear
 chrome.runtime.onUpdateAvailable.addListener(function(details){
 	waitUntilClear('update',function(){
@@ -22,7 +20,6 @@ chrome.runtime.onUpdateAvailable.addListener(function(details){
 });
 
 // refresh pages on install or upgrade
-// todo: defer until clean
 chrome.runtime.onInstalled.addListener(function(details){
 	if(debug) console.log(details);
 	chrome.tabs.query({}, function(tabs){
@@ -65,7 +62,7 @@ chrome.runtime.onInstalled.addListener(function(details){
 				chrome.storage.largeSync.get(['options'],function(o){
 					if(!o.options){
 						if(debug) console.log('no options found, setting to default');
-						var o={queue_run_freq:5,queue_item_delay:2,show_timing_note:1,include_tx_enabled:'',bg_sent_notification:1};
+						var o={queue_run_freq:5,queue_item_delay:1,show_timing_note:1,include_tx_enabled:'',bg_sent_notification:1};
 						chrome.storage.largeSync.set({options:o});
 					}
 					if(cmpVersions(details.previousVersion,'1.0.11')===-1){
@@ -109,6 +106,8 @@ chrome.runtime.onInstalled.addListener(function(details){
 								setItemProcessing('',function(){});
 							}); else setItemProcessing('',function(){});
 						});
+					} else {
+						setItemProcessing('',function(){});
 					}
 				});
 			});
@@ -159,13 +158,11 @@ if(debug){
 	});
 }
 
-// tries to send up to ~250 queued tips every 60m
-// 14s between requests to profile page and bchtips database
+
 var evg={si:'',serr:0,nl:{},item:'',lastd:0,start:Date.now(),itemdelay:0};
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
-	// set user-signaled updates alarm
 	// set tx queue alarm
 	chrome.alarms.clear('txq');
 	chrome.alarms.get('txq',function(a){

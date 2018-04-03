@@ -210,7 +210,7 @@ function sendQueued(obj,callback){
 											if(item[5]=='r') var st='Reddit';
 											if(evp && o.options.bg_sent_notification){
 												setTimeout(function(){
-													chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+item[1]+' sent to '+item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
+													chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':item[1]+' sent to '+item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
 															// add to listener object
 															chrome.storage.local.get('notifs',function(on){
 																if(!on || !on.notifs){ on={}; on.notifs={}; }
@@ -300,7 +300,7 @@ function setItemProcessing(val,callback){
 }
 
 function getItemProcessing(callback){
-	if(debug) console.log('getItemProcessing='+itemProcessing);
+	if(debug) console.log('getItemProcessing()');
 	var ip='';
 	for(let i=0;i<chrome.extension.getViews().length;i++) try { if(chrome.extension.getViews()[i].itemProcessing) ip=1; break; } catch(e){}
 	if(ip) return callback(ip);
