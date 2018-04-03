@@ -313,7 +313,7 @@ function sendTipClicked(d){
 				//if(debug){ console.log('x0.responseText='); console.log(x0.responseText); }
 				if(ujs.data.public_description && ujs.kind=='t5'){
 					var tmp=ujs.data.public_description.replace('\\n','').split(' ');
-					console.log('ujs.data.public_description='+tmp);
+					if(debug) console.log('ujs.data.public_description='+tmp);
 					for(i=tmp.length;i>=0;i--) try { if(bchaddr.isCashAddress(tmp[i])==true) uaddr=tmp[i].replace('bitcoincash:',''); } catch(e){}
 					if(uaddr&&debug) console.log('got address from public description: '+uaddr);
 				}
@@ -421,73 +421,78 @@ function sendTipClicked(d){
 				});
 				document.getElementById('bchtip_send'+id).addEventListener('click', function(){
 					var id=this.getAttribute('data-id');
-					var a=getSatAmt(id);
-					var b=satToUnit(a,'bch');
-					var b1=b+' BCH ($'+bchtousd(b)+' USD)';
-					var b2=BigNumber(b).toFixed(8)+' BCH ($'+bchtousd(b)+' USD)';
-					document.getElementById('bchtip_inwrap'+id).style.display='none';
-					var d=document.getElementById('bchtip'+id).getAttribute('data-tip');
-					d=d.split(';');
-					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')) document.getElementById('bchtip_inwrap2_'+id).innerHTML='Sent '+b1+' to '+d[1]+'! '; else document.getElementById('bchtip_inwrap2_'+id).innerHTML='Queued '+b1+' to '+d[1]+'! ';
-					document.getElementById('bchtip_inwrap2_'+id).style.display='';
-					document.getElementById('bchtip_div'+id).setAttribute('data-sent',1);
-					// set and expand suggested msg
-					showReplyText(b1,id);
-					// send
-					chrome.storage.largeSync.set({lastsend:{amt:document.getElementById('bchtip_amt'+id).value,unit:document.getElementById('bchtip_unit'+id).value}});
-					if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
-						var tx=document.getElementById('bchtip_tx'+id).value; // todo: store rate with tx to prevent bchtousd (above) race
-						if(debug) console.log('sending tx='+tx);
-						// refresh utxos? they're 21s fresh anyway..
-						var x=new XMLHttpRequest();
-						x.open("POST","https://blockdozer.com/insight-api/tx/send",true);
-						x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-						x.onreadystatechange=function(){
-							if(x.readyState==4){
-								if(x.status==200){
-									if(debug) console.log('x.responseText='+x.responseText);
-									if(x.responseText){
-										try { var r=JSON.parse(x.responseText); } catch(e) { document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error parsing response: '+x.responseText+'</span> '; if(debug) console.log('error parsing response: '+x.responseText); }
-										if(debug){ console.log('r='); console.log(r); }
-										setTimeout(function(){ updateUtxos(); },10000);
-										if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view tx</a>) ';
+					waitUntilClearCS('cs',function(){
+						setItemProcessingCS(1,function(){
+							var a=getSatAmt(id);
+							var b=satToUnit(a,'bch');
+							var b1=b+' BCH ($'+bchtousd(b)+' USD)';
+							var b2=BigNumber(b).toFixed(8)+' BCH ($'+bchtousd(b)+' USD)';
+							document.getElementById('bchtip_inwrap'+id).style.display='none';
+							var d=document.getElementById('bchtip'+id).getAttribute('data-tip');
+							d=d.split(';');
+							if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')) document.getElementById('bchtip_inwrap2_'+id).innerHTML='Sent '+b1+' to '+d[1]+'! '; else document.getElementById('bchtip_inwrap2_'+id).innerHTML='Queued '+b1+' to '+d[1]+'! ';
+							document.getElementById('bchtip_inwrap2_'+id).style.display='';
+							document.getElementById('bchtip_div'+id).setAttribute('data-sent',1);
+							// set and expand suggested msg
+							showReplyText(b1,id);
+							// send
+							chrome.storage.largeSync.set({lastsend:{amt:document.getElementById('bchtip_amt'+id).value,unit:document.getElementById('bchtip_unit'+id).value}});
+							if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
+								var tx=document.getElementById('bchtip_tx'+id).value; // todo: store rate with tx to prevent bchtousd (above) race
+								if(debug) console.log('sending tx='+tx);
+								// refresh utxos? they're 21s fresh anyway..
+								var x=new XMLHttpRequest();
+								x.open("POST","https://blockdozer.com/insight-api/tx/send",true);
+								x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+								x.onreadystatechange=function(){
+									if(x.readyState==4){
+										if(x.status==200){
+											if(debug) console.log('x.responseText='+x.responseText);
+											if(x.responseText){
+												try { var r=JSON.parse(x.responseText); } catch(e) { document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error parsing response: '+x.responseText+'</span> '; if(debug) console.log('error parsing response: '+x.responseText); }
+												if(debug){ console.log('r='); console.log(r); }
+												setTimeout(function(){ updateUtxos(); },10000);
+												if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view tx</a>) ';
+												document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
+												document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(id); });
+												// add to tx_sent
+												if(r.txid){
+													chrome.storage.largeSync.get(['tx_sent'],function(o){
+														if(debug){ console.log('ls o='); console.log(o); }
+														if(!o || !o.tx_sent){ o={}; o.tx_sent=[]; }
+														o.tx_sent.push([Date.now(),b2,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
+														if(o.tx_sent.length>250){ while(1){ o.tx_sent.shift(); if(o.tx_sent.length<=250) break; } }
+														chrome.storage.largeSync.set(o,function(){ setItemProcessingCS('',function(){}); });
+													});
+												}
+											} else var senderr=1;
+										} else var senderr=1;
+									}
+									if(senderr){
+										setItemProcessingCS('',function(){});
+										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error '+x.response+'</span> ';
 										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
 										document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
-										// add to tx_sent
-										if(r.txid){
-											chrome.storage.largeSync.get(['tx_sent'],function(o){
-												if(debug){ console.log('ls o='); console.log(o); }
-												if(!o || !o.tx_sent){ o={}; o.tx_sent=[]; }
-												o.tx_sent.push([Date.now(),b2,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
-												if(o.tx_sent.length>250){ while(1){ o.tx_sent.shift(); if(o.tx_sent.length<=250) break; } }
-												chrome.storage.largeSync.set(o);
-											});
-										}
-									} else var senderr=1;
-								} else var senderr=1;
-							}
-							if(senderr){
-								document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error '+x.response+'</span> ';
+										if(debug){ console.log("transmit error x="); console.log(x); }
+									}
+								}
+								x.send('rawtx='+tx);
+							} else { // queue
+								if(debug) console.log('queuing..');
+								chrome.storage.largeSync.get(['tx_queue'],function(o){
+									if(debug){ console.log('ls o='); console.log(o); }
+									if(!o || !o.tx_queue){ o={}; o.tx_queue=[]; }
+									o.tx_queue.push([Date.now(),b2,d[1],d[2],null,'r']); // 0=time 1=amt 2=user 3=url 4=null 5=site(r,t)
+									if(o.tx_queue.length>250){ while(1){ o.tx_queue.shift(); if(o.tx_queue.length<=250) break; } }
+									chrome.storage.largeSync.set(o,function(){ setItemProcessingCS('',function(){}); });
+								});
+								document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_viewq'+id+'" class="bchtip" href="javascript:;">view queue</a>) ';
 								document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
-								document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
-								if(debug){ console.log("transmit error x="); console.log(x); }
+								document.getElementById('bchtip_viewq'+id).addEventListener('click',function(){ window.open(chrome.extension.getURL("tx.html")); });
+								document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(id); });
 							}
-						}
-						x.send('rawtx='+tx);
-					} else { // queue
-						if(debug) console.log('queuing..');
-						chrome.storage.largeSync.get(['tx_queue'],function(o){
-							if(debug){ console.log('ls o='); console.log(o); }
-							if(!o || !o.tx_queue){ o={}; o.tx_queue=[]; }
-							o.tx_queue.push([Date.now(),b2,d[1],d[2],null,'r']); // 0=time 1=amt 2=user 3=url 4=null 5=site(r,t)
-							if(o.tx_queue.length>250){ while(1){ o.tx_queue.shift(); if(o.tx_queue.length<=250) break; } }
-							chrome.storage.largeSync.set(o);
 						});
-						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_viewq'+id+'" class="bchtip" href="javascript:;">view queue</a>) ';
-						document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
-						document.getElementById('bchtip_viewq'+id).addEventListener('click',function(){ window.open(chrome.extension.getURL("tx.html")); });
-						document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
-					}
+					});
 				});
 				// scroll to tip
 				if(window.hash=='#tip' && id==0 && !updating){
@@ -643,10 +648,10 @@ function afterDOMLoaded(){
 	var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/ // index pages
 	var p2=/^https:\/\/(.*)\.reddit\.com\/r\/(.*)\/comments\/(.*)/ // comment pages
 	if(!p1.test(window.location.href.split("?")[0])&&!p2.test(window.location.href)) return;
-	var x=document.createElement("input");
-	x.setAttribute('id','bchtip_globals');
-	x.setAttribute('type','hidden')
-	document.body.appendChild(x);
+	var x=document.createElement("input"); x.setAttribute('id','itemProcessing'); x.setAttribute('type','hidden'); document.body.appendChild(x);
+	getItemProcessingCS(function(ip){ if(debug) console.log('[not needed] setting itemProcessing to '+ip); document.getElementById('itemProcessing').value=ip; });
+
+	var x=document.createElement("input"); x.setAttribute('id','bchtip_globals'); x.setAttribute('type','hidden'); document.body.appendChild(x);
 	document.getElementById('bchtip_globals').setAttribute('data-start',starttime);
 	if(p1.test(window.location.href.split("?")[0])) document.getElementById('bchtip_globals').setAttribute('data-index',1);
 	if(document.getElementsByClassName('archived-infobar').length>0) document.getElementById('bchtip_globals').setAttribute('data-archived',1);

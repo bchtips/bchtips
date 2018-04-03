@@ -10,11 +10,22 @@ function executeScripts(tabId,injectDetailsArray){
 	if (callback !== null) callback(); // execute outermost function
 }
 
+//getItemProcessing(function(ip){ if(ip) setItemProcessing('',function(){}); // todo: clear here if needed
+
+// Defer update until clear
+chrome.runtime.onUpdateAvailable.addListener(function(details){
+	waitUntilClear('update',function(){
+		setItemProcessing(1,function(){
+			chrome.runtime.reload();
+		});
+	});
+});
+
 // refresh pages on install or upgrade
+// todo: defer until clean
 chrome.runtime.onInstalled.addListener(function(details){
-	//if(debug) console.log(details);
+	if(debug) console.log(details);
 	chrome.tabs.query({}, function(tabs){
-		//if(debug) console.log(tabs);
 		if(details.reason=='install') var t='installed';
 		else if(details.reason=='update') var t='updated';
 		for(var i=0;i<tabs.length;i++){
@@ -38,55 +49,74 @@ chrome.runtime.onInstalled.addListener(function(details){
    			}
 		}
 	});
-	// v1.0.9.9 to 1.0.10 update
-	// change tx_attempts local to sync
-	if(details.previousVersion=='1.0.9.9'){
-		chrome.storage.local.get('tx_attempts',function(at){
-			if(!at || !at.tx_attempts) return;
-			chrome.storage.largeSync.set({tx_attempts:at.tx_attempts});
-			chrome.storage.local.remove('tx_attempts');
+	setItemProcessing('',function(){
+		waitUntilClear('install/update',function(){
+			setItemProcessing(1,function(){
+				// v1.0.9.9 to 1.0.10 update
+				// change tx_attempts local to sync
+				if(details.previousVersion=='1.0.9.9'){
+					chrome.storage.local.get('tx_attempts',function(at){
+						if(!at || !at.tx_attempts) return;
+						chrome.storage.largeSync.set({tx_attempts:at.tx_attempts});
+						chrome.storage.local.remove('tx_attempts');
+					});
+				}
+				// add default options if dont exist
+				chrome.storage.largeSync.get(['options'],function(o){
+					if(!o.options){
+						if(debug) console.log('no options found, setting to default');
+						var o={queue_run_freq:5,queue_item_delay:2,show_timing_note:1,include_tx_enabled:'',bg_sent_notification:1};
+						chrome.storage.largeSync.set({options:o});
+					}
+					if(cmpVersions(details.previousVersion,'1.0.11')===-1){
+						// move all to largeSync
+						chrome.storage.sync.get(null,function(o){
+							if(debug){ console.log('all sync (moving to largesync)='); console.log(o); }
+							var p={};
+							if(o.data) p.data=o.data;
+							if(o.format) p.format=o.format;
+							if(o.lastsend) p.lastsend=o.lastsend;
+							if(o.rate_last_time) p.rate_last_time=o.rate_last_time;
+							if(o.rate_last_value) p.rate_last_value=o.rate_last_value;
+							if(o.fee) p.fee=o.fee;
+							if(o.txq_lastrun) p.txq_lastrun=o.txq_lastrun;
+							if(debug){ console.log('final p='); console.log(p); }
+							//if(txq_lock) p.txq_lock=o.txq_lock;
+							chrome.storage.largeSync.set(p,function(){
+								setItemProcessing('',function(){});
+								chrome.storage.largeSync.get(null,function(o){
+									if(debug){ console.log('all largesync='); console.log(o); }
+								});
+							});
+							chrome.storage.sync.remove(['data','format','lastsend','rate_last_time','rate_last_value','fee','txq_lastrun','txq_lock']);
+						});
+					} else if(cmpVersions(details.previousVersion,'1.0.11')===0){
+						if(debug) console.log('changing default options to faster');
+						chrome.storage.largeSync.get(['options'],function(o){
+							var p=o;
+							if(o.options.queue_run_freq==60) p.options.queue_run_freq=5;
+							if(p!=o) chrome.storage.largeSync.set(p,function(){
+								setItemProcessing('',function(){});
+							}); else setItemProcessing('',function(){});
+						});
+					} else if(cmpVersions(details.previousVersion,'1.0.12')===0){
+						if(debug) console.log('changing options to faster');
+						chrome.storage.largeSync.get(['options'],function(o){
+							var p=o;
+							if(o.options.queue_run_freq==60) p.options.queue_run_freq=5;
+							if(o.options.queue_item_delay==1) p.options.queue_item_delay=1;
+							if(p!=o) chrome.storage.largeSync.set(p,function(){
+								setItemProcessing('',function(){});
+							}); else setItemProcessing('',function(){});
+						});
+					}
+				});
+			});
 		});
-	}
-
-	// add default options if dont exist
-	chrome.storage.largeSync.get(['options'],function(o){
-		if(!o.options){
-			if(debug) console.log('no options found, setting to default');
-			var o={queue_run_freq:5,queue_item_delay:15,/*user_update_freq:5,user_update_enabled:1,*/show_timing_note:1,include_tx_enabled:'',bg_sent_notification:1};
-			chrome.storage.largeSync.set({options:o});
-		}
 	});
-	if(cmpVersions(details.previousVersion,'1.0.11')===-1){
-		// move all to largeSync
-		chrome.storage.sync.get(null,function(o){
-			if(debug){ console.log('all sync (moving to largesync)='); console.log(o); }
-			var p={};
-			if(o.data) p.data=o.data;
-			if(o.format) p.format=o.format;
-			if(o.lastsend) p.lastsend=o.lastsend;
-			if(o.rate_last_time) p.rate_last_time=o.rate_last_time;
-			if(o.rate_last_value) p.rate_last_value=o.rate_last_value;
-			if(o.fee) p.fee=o.fee;
-			if(o.txq_lastrun) p.txq_lastrun=o.txq_lastrun;
-			if(debug){ console.log('final p='); console.log(p); }
-			//if(txq_lock) p.txq_lock=o.txq_lock;
-			chrome.storage.largeSync.set(p);
-			chrome.storage.sync.remove(['data','format','lastsend','rate_last_time','rate_last_value','fee','txq_lastrun','txq_lock']);
-		});
-		setTimeout(function(){ chrome.storage.largeSync.get(null,function(o){
-			if(debug){ console.log('all largesync='); console.log(o); }
-		}); },3000);
-	}
-	if(cmpVersions(details.previousVersion,'1.0.11')===0){
-		if(debug) console.log('changing default options to faster');
-		chrome.storage.largeSync.get(['options'],function(o){
-			var p=o;
-			if(o.options.queue_run_freq==60) p.options.queue_run_freq=5;
-			if(p!=o) chrome.storage.largeSync.set(p);
-		});
-	}
 	// clean up notifs
 	chrome.storage.local.remove('notifs');
+	//setItemProcessing('',function(){});
 });
 
 chrome.contextMenus.removeAll();
@@ -97,7 +127,7 @@ chrome.contextMenus.create({
         window.open(chrome.extension.getURL("tx.html"));
       }
 });
-
+  
 chrome.notifications.onButtonClicked.addListener(function(ni,bi){
 		chrome.storage.local.get('notifs',function(o){
 			//if(debug){ console.log('notifClicked ni='+ni+' bi='+bi+' notifs='); console.log(o.notifs); }
@@ -131,27 +161,13 @@ if(debug){
 
 // tries to send up to ~250 queued tips every 60m
 // 14s between requests to profile page and bchtips database
-var evg={si:'',serr:0,nl:{},item:'',lastd:0,start:Date.now()};
+var evg={si:'',serr:0,nl:{},item:'',lastd:0,start:Date.now(),itemdelay:0};
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',afterDOMLoaded); else afterDOMLoaded();
 function afterDOMLoaded(){
 	// set user-signaled updates alarm
-	/*chrome.storage.largeSync.get(['options'],function(o){
-		if(o.options.user_update_enabled){
-			o.options.user_update_freq=parseInt(o.options.user_update_freq);
-			chrome.alarms.get('usu',function(a){
-				if(debug){ console.log('alarm usu a='); console.log(a); }
-				if(!a || (a && a.periodInMinutes!=o.options.user_update_freq)){
-					if(debug) console.log('alarm not set or period != '+o.options.user_update_freq+', setting');
-					chrome.alarms.clear('usu');
-					chrome.alarms.create('usu',{periodInMinutes:o.options.user_update_freq});
-					if(debug) setTimeout(function(){ chrome.alarms.getAll(function(a){ console.log('alarms='); console.log(a); }); },1000);
-				}
-			});
-		}
-	});*/
-
 	// set tx queue alarm
+	chrome.alarms.clear('txq');
 	chrome.alarms.get('txq',function(a){
 		if(debug){ console.log('alarm txq a='); console.log(a); }
 		if(!a || (a && a.periodInMinutes!=1)){
@@ -165,43 +181,15 @@ function afterDOMLoaded(){
 	chrome.alarms.onAlarm.addListener(function(a){
 		if(debug) console.log('alarm '+a.name+' fired.');
 		if(a.name=='txq'||a.name=='txq_test') txqInit();
-		//else if(a.name=='usu'||a.name=='usu_test') usuInit();
 	});
-	
-	/*function usuInit(){
-		if(debug) console.log('usuInit() '+Date.now());
-		var now=Date.now();
-		chrome.storage.largeSync.get(['options','usu_lastrun'],function(o){
-			var locktime=(parseInt(o.options.user_update_freq)*1000*60)-2000;
-			var dorun='';
-			if(!o.usu_lastrun) o.usu_lastrun=Date.now()-locktime;
-			var lr=Date.now()-o.usu_lastrun;
-			if(lr>=locktime) dorun=1;
-			if(dorun){
-				if(debug) console.log('usu last run '+lr+'/'+locktime+' ago. running now');
-				chrome.storage.largeSync.set({usu_lastrun:now});
-				var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://cdn.bchftw.com/bchtips/usu.csv",true);
-				onRequestsComplete([x0], function(xr, xerr){
-					if(x0.status!==200){ if(debug) console.log('usu response !200. aborting\n'); return; }
-					else if(x0.responseText.trim()=='') { if(debug) console.log('no usus to process.\n'); return; }
-					var usus=x0.responseText.trim().split('\n');
-					if(debug){ console.log('usus='); console.log(usus); }
-				});
-				x0.send();
-			} else {
-				if(debug) console.log('usu last run '+lr+'/'+locktime+' ago. not time to run');
-			}
-		});
-	}
-	chrome.storage.largeSync.get(['options'],function(o){
-		if(o.options.user_update_enabled) usuInit();
-	});*/
 	
 	// init
 	function txqInit(){
 		if(debug) console.log('txqInit() '+Date.now());
 		var now=Date.now();
-		chrome.storage.largeSync.get(['options','txq_lastrun','txq_lastattempt'],function(o){
+		chrome.storage.largeSync.get(['options','txq_lastrun','txq_lastattempt'],function(o){ // todo: only read as needed
+			evg.itemdelay=o.options.queue_item_delay;
+			if(debug) console.log('initial itemdelay seconds='+evg.itemdelay);
 			if(!o.txq_lastattempt) o.txq_lastattempt=0;
 			if(now-o.txq_lastattempt<((o.options.queue_item_delay*1000)+25000)){ // queue_item_delay+ to allow for sync delay and 15s ajax timeout
 				if(debug) console.log('last attempt '+(now-o.txq_lastattempt)+' < '+((o.options.queue_item_delay*1000)+30000)+' ago, skipping queue run');
@@ -216,58 +204,67 @@ function afterDOMLoaded(){
 				if(debug) console.log('txq last run '+lr+'/'+locktime+' ago. running now');
 				chrome.storage.largeSync.set({txq_lastrun:now});
 				evg.item='',evg.lastd=0,evg.start=now; // reset
-				send();
+				send(1);
 			} else {
 				if(debug) console.log('txq last run '+lr+'/'+locktime+' ago. not time to run');
 			}
 		});
 	}
-	setTimeout(function(){ txqInit(); },3333); // temp delay for upgrade 1.0.11
+	setTimeout(function(){ waitUntilClear('init',function(){ txqInit(); }); },1000);
 	
 	// send current item
-	function send(){
+	function send(first){
 		if(debug){ console.log('send() evg='); console.log(evg); }
-		// check if have wallet and items in queue
-		chrome.storage.largeSync.get(['options','data','fee','tx_queue','tx_attempts'],function(o){
-			if(!o.data || !o.data.waddr || !o.data.wkey){
-				if(debug) console.log('no wallet addr/key set. aborting'); // todo: notify
-				clearInterval(evg.si); evg.si='';
-				return;
-			}
-			if(!evg.si) evg.si=setInterval(function(){ send(); },parseInt(o.options.queue_item_delay)*1000);
-			//if(debug){ console.log('ls o='); console.log(o); }
-			if(o && o.tx_queue && o.tx_queue.length>0){
-				if(debug && evg.lastd==0){ console.log('queue items='); console.log(o.tx_queue); }
-				// get next newest item
-				var found='';
-				for(var i=0;i<o.tx_queue.length;i++) if(o.tx_queue[i][0]>evg.lastd){ found=1; evg.item=o.tx_queue[i]; evg.lastd=evg.item[0]; break; }
-				if(!found){
-					if(debug) console.log('no item found newer than '+evg.lastd+'. all done');
-					if(debug){ var m=new SpeechSynthesisUtterance('all done'); speechSynthesis.speak(m); }
-					clearInterval(evg.si); evg.si='';
-					return;
-				} else if(debug) console.log('item='+evg.item.join(' '));
-				
-				var r=sendQueued([o,evg.item,1],function(cb){
-					if(debug){ console.log('cb='); console.log(cb); }
-					if(cb.error && cb.m=='duplicate txid'){
-						if(debug) console.log('got duplicate txid, ignoring for now');
-						return;
-					} if(cb.error && cb.m=='mempool conflict'){
-						if(debug) console.log('got mempool conflict, retrying');
-						evg.lastd=evg.lastd-1;
-						return;
-					} else if(cb.error){
-						if(debug) console.log('got fatal error, aborting queue run');
-						clearInterval(evg.si); evg.si='';
-						return;
-					}
+		if(first) var waituntil=Date.now(); else waituntil=Date.now()+parseInt(evg.itemdelay)*1000;
+		if(debug) console.log('waituntil='+waituntil);
+		waitUntil(waituntil,'send()',function(){
+			waitUntilClear('send()',function(){
+				setItemProcessing(1,function(){
+					chrome.storage.largeSync.get(['options','data','fee','tx_queue','tx_attempts'],function(o){
+						if(!o.data || !o.data.waddr || !o.data.wkey){
+							if(debug) console.log('no wallet addr/key set. aborting'); // todo: notify
+							setItemProcessing('',function(){});
+							return;
+						}
+						//if(debug){ console.log('ls o='); console.log(o); }
+						if(o && o.tx_queue && o.tx_queue.length>0){
+							if(debug && evg.lastd==0){ console.log('queue items='); console.log(o.tx_queue); }
+							// get next newest item
+							var found='';
+							for(var i=0;i<o.tx_queue.length;i++) if(o.tx_queue[i][0]>evg.lastd){ found=1; evg.item=o.tx_queue[i]; evg.lastd=evg.item[0]; break; }
+							if(!found){
+								if(debug) console.log('no item found newer than '+evg.lastd+'. all done');
+								if(debug){ var m=new SpeechSynthesisUtterance('all done'); speechSynthesis.speak(m); }
+								setItemProcessing('',function(){});
+								return;
+							} else if(debug) console.log('item='+evg.item.join(' '));
+							
+							var r=sendQueued([o,evg.item,1],function(cb){
+								setItemProcessing('',function(){});
+								if(debug){ console.log('cb='); console.log(cb); }
+								if(cb.error && cb.m=='duplicate txid'){
+									if(debug) console.log('got duplicate txid, ignoring for now');
+									send();
+									return;
+								} if(cb.error && cb.m=='mempool conflict'){
+									if(debug) console.log('got mempool conflict, retrying');
+									evg.lastd=evg.lastd-1;
+									send();
+									return;
+								} else if(cb.error){
+									if(debug) console.log('got fatal error, aborting queue run');
+									return;
+								}
+								send();
+							});
+						} else {
+							if(debug) console.log('no items to send');
+							setItemProcessing('',function(){});
+							return;
+						}
+					});
 				});
-			} else {
-				if(debug) console.log('no items to send');
-				clearInterval(evg.si); evg.si='';
-				return;
-			}
+			});
 		});
 	}
 }

@@ -92,13 +92,14 @@ function sendQueued(obj,callback){
 	// update last attempt time
 	if(!o.tx_attempts) o.tx_attempts={};
 	o.tx_attempts[item[0]]=Date.now();
-	for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshAgo(item[0],o.tx_attempts[item[0]]);
+	for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) try { chrome.extension.getViews()[i].refreshAgo(item[0],o.tx_attempts[item[0]]); } catch(e){}
 	if(evp) chrome.storage.largeSync.set({tx_attempts:o.tx_attempts,txq_lastattempt:o.tx_attempts[item[0]]}); else chrome.storage.largeSync.set({tx_attempts:o.tx_attempts}); // dont block queue run from tx page
-	if(debug){ var m=new SpeechSynthesisUtterance('trying to send to '+item[2]); speechSynthesis.speak(m); }
+	if(debug){ var m=new SpeechSynthesisUtterance('sending to '+item[2]); speechSynthesis.speak(m); }
 
 	// first, just get user address
 	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://www.reddit.com/r/u_"+item[2]+"/about.json",true);
 	var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/reddit/"+item[2][0].toLowerCase()+".csv",true);
+	//var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/timeout.php");
 	var xs0=[x0,x1];
 	onRequestsComplete(xs0, function(xr, xerr){
 		//if(debug){ console.log('xs0='); console.log(xs0); }
@@ -119,7 +120,7 @@ function sendQueued(obj,callback){
 		var uaddr='';
 		if(ujs.data.public_description && ujs.kind=='t5'){
 			var tmp=ujs.data.public_description.replace('\\n','').split(' ');
-			console.log('ujs.data.public_description='+tmp);
+			if(debug) console.log('ujs.data.public_description='+tmp);
 			for(i=tmp.length;i>=0;i--) try { if(bchaddr.isCashAddress(tmp[i])==true) uaddr=tmp[i].replace('bitcoincash:',''); } catch(e){}
 			if(uaddr&&debug) console.log('got address from public description: '+uaddr);
 		}
@@ -181,7 +182,7 @@ function sendQueued(obj,callback){
 								//if(debug){ console.log('r='); console.log(r); }
 								// add to tx_sent
 								if(r.txid){
-									chrome.storage.largeSync.get(['tx_sent'],function(ox){
+									chrome.storage.largeSync.get(['tx_sent','tx_queue','tx_attempts'],function(ox){
 										if(!ox.tx_sent) ox.tx_sent=[];
 										// check dupe
 										for(var i=0;i<ox.tx_sent.length;i++){
@@ -192,43 +193,41 @@ function sendQueued(obj,callback){
 												return;
 											}
 										}
+										// remove from tx_queue
+										if(!ox.tx_queue) ox.tx_queue=[]; if(!ox.tx_attempts) ox.tx_attempts=[];
+										for(var i=0;i<ox.tx_queue.length;i++) if(ox.tx_queue[i][0]==item[0]){
+											ox.tx_queue.splice(i,1);
+											delete ox.tx_attempts[item[0]];
+											break;
+										}
 										// add to tx_sent
 										ox.tx_sent.push([Date.now(),item[1],item[2],item[3],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
 										if(ox.tx_sent.length>250){ while(1){ ox.tx_sent.shift(); if(ox.tx_sent.length<=250) break; } }
-										chrome.storage.largeSync.set(ox);
-										// remove from tx_queue
-										chrome.storage.largeSync.get(['tx_queue','tx_attempts'],function(ox){
-											if(!ox.tx_queue) ox.tx_queue=[]; if(!ox.tx_attempts) ox.tx_attempts=[];
-											for(var i=0;i<ox.tx_queue.length;i++) if(ox.tx_queue[i][0]==item[0]){
-												ox.tx_queue.splice(i,1);
-												delete ox.tx_attempts[item[0]];
-												break;
+										chrome.storage.largeSync.set(ox,function(){
+											if(debug) console.log('sent '+item[1]+' to '+item[2]+ '. tx='+r.txid);
+											callback({success:1,m:'tip sent',u:item[2]});
+											if(debug){ var m=new SpeechSynthesisUtterance('Tip sent'); speechSynthesis.speak(m); }
+											if(item[5]=='r') var st='Reddit';
+											if(evp && o.options.bg_sent_notification){
+												setTimeout(function(){
+													chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+item[1]+' sent to '+item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
+															// add to listener object
+															chrome.storage.local.get('notifs',function(on){
+																if(!on || !on.notifs){ on={}; on.notifs={}; }
+																on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/insight/tx/'+r.txid];
+																//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
+																chrome.storage.local.set({notifs:on.notifs});
+															});
+													});
+												},3000); // give it a few secs to add to block explorer
 											}
-											chrome.storage.largeSync.set(ox);
-										});
-										if(debug) console.log('sent '+item[1]+' to '+item[2]+ '. tx='+r.txid);
-										if(debug){ var m=new SpeechSynthesisUtterance('Tip sent'); speechSynthesis.speak(m); }
-										if(item[5]=='r') var st='Reddit';
-										if(evp && o.options.bg_sent_notification){
+											// hide queued item on tx pages immediately
+											for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].hideQueued(item[0]);
+											// refresh tx pages
 											setTimeout(function(){
-												chrome.notifications.create('',{'type':'basic','iconUrl':'img/icon.png','title':'Tip sent','message':'Pending tip of '+item[1]+' sent to '+item[2]+' on '+st+'.','requireInteraction':false,'buttons':[{'title':'View Post/Comment'},{'title':'View TX on Blockchain'}]},function(id){
-														// add to listener object
-														chrome.storage.local.get('notifs',function(on){
-															if(!on || !on.notifs){ on={}; on.notifs={}; }
-															on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/insight/tx/'+r.txid];
-															//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
-															chrome.storage.local.set({notifs:on.notifs});
-														});
-												});
-											},3000); // give it a few secs to add to block explorer
-										}
-										callback({success:1,m:'tip sent',u:item[2]});
-										// hide queued item on tx pages immediately
-										for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].hideQueued(item[0]);
-										// refresh tx pages
-										setTimeout(function(){
-											for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshData();
-										},2500);
+												for(let i=0;i<chrome.extension.getViews().length;i++) if(chrome.extension.getViews()[i].location.pathname.indexOf('/tx.html')!==-1 && chrome.extension.getViews()[i].document.hasFocus()) chrome.extension.getViews()[i].refreshData();
+											},2500);
+										});
 									});
 								} else senderr=1;
 							} else var senderr=1;
@@ -259,6 +258,9 @@ function sendQueued(obj,callback){
 					if(evp){ clearInterval(evg.si); evg.si=''; }
 					callback({error:1,m:'insufficient funds'});
 					return;
+				} else {
+					callback({error:1,m:'unhandled'});
+					return;
 				}
 			}
 		});
@@ -267,6 +269,135 @@ function sendQueued(obj,callback){
 	x0.send(); x1.send();
 }
 
+
+function setItemProcessing(val,callback){
+	if(debug) console.log('setItemProcessing('+val+')');
+	for(let i=0;i<chrome.extension.getViews().length;i++) try { chrome.extension.getViews()[i].itemProcessing=val; } catch(e){}
+	chrome.tabs.query({}, function(tabs){
+		var rcnt=0;
+		function dotabs(tabcb){
+			cnt=0;
+			for(var i=0;i<tabs.length;i++){
+				if(!tabs[i].url) continue;
+				if(tabs[i].url.indexOf('.reddit.com/')!==-1){
+					var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/; // index pages
+					var p2=/^https:\/\/(.*)\.reddit\.com\/r\/(.*)\/comments\/(.*)/; // comment pages
+					if(!p1.test(tabs[i].url.split("?")[0])&&!p2.test(tabs[i].url)) continue;
+					chrome.tabs.executeScript(tabs[i].id,{code:"document.getElementById('itemProcessing').value='"+val+"';"},function(){ cnt++; });
+				}
+				rcnt++;
+			}
+			var start=Date.now();
+			function checkdone(){
+				if(cnt==rcnt) return tabcb();
+				if(Date.now()-start>5000) return tabcb();
+				setTimeout(function(){ /*console.log('cnt='+cnt+'/'+rcnt);*/ checkdone(); },100);
+			}
+			checkdone();
+		}
+		dotabs(function(){ callback(); });
+	});
+}
+
+function getItemProcessing(callback){
+	if(debug) console.log('getItemProcessing='+itemProcessing);
+	var ip='';
+	for(let i=0;i<chrome.extension.getViews().length;i++) try { if(chrome.extension.getViews()[i].itemProcessing) ip=1; break; } catch(e){}
+	if(ip) return callback(ip);
+	chrome.tabs.query({}, function(tabs){
+		for(var i=0;i<tabs.length;i++){
+			if(!tabs[i].url) continue;
+			if(tabs[i].url.indexOf('.reddit.com/')!==-1){
+				var p1=/^https:\/\/(.*)\.reddit\.com\/r\/[^\/]*\/$/; // index pages
+				var p2=/^https:\/\/(.*)\.reddit\.com\/r\/(.*)\/comments\/(.*)/; // comment pages
+				if(!p1.test(tabs[i].url.split("?")[0])&&!p2.test(tabs[i].url)) continue;
+				//console.log(tabs[i]);
+				chrome.tabs.executeScript(tabs[i].id,{code:"document.getElementById('itemProcessing').value;"},function(a){
+					if(a[0]) return callback(a[0]);
+				});
+			}
+		}
+		return callback(ip);
+	});
+}
+
+function waitUntilClear(name,callback){
+	if(debug) console.log('waitUntilClear ('+name+') '+Date.now());
+	var tryToDoIt = function(){
+		getItemProcessing(function(ip){
+			if(debug) console.log('getItemProcessing result='+ip);
+			if(ip){
+				if(debug) console.log('waiting ('+name+')..'+Date.now());
+				setTimeout(tryToDoIt, 100);
+			} else {
+				if(debug) console.log('clear ('+name+') '+Date.now());
+				callback();
+			}
+		});
+	}
+	tryToDoIt();
+}
+
+// itemProcessing for Content Scripts via message passing proxy to above functions
+function setItemProcessingCS(val,callback){
+	if(debug) console.log('setItemProcessingCS("'+val+'")');
+	chrome.runtime.sendMessage({setIP:val},function(r){
+		if(debug){ console.log('setItemProcessingCS="'+val+'" response r='); console.log(r); }
+		callback();
+	});
+}
+
+function getItemProcessingCS(callback){
+	if(debug) console.log('getItemProcessingCS()');
+	chrome.runtime.sendMessage({getIP:1},function(r){
+		if(debug){ console.log('getItemProcessingCS response r='); console.log(r); }
+		callback(r.ip);
+	});
+}
+
+function waitUntilClearCS(name,callback){
+	if(debug) console.log('waitUntilClearCS ('+name+') '+Date.now());
+	var tryToDoIt = function(){
+		getItemProcessingCS(function(ip){
+			if(debug) console.log('getItemProcessing result='+ip);
+			if(ip){
+				if(debug) console.log('waiting ('+name+')..'+Date.now());
+				setTimeout(tryToDoIt, 100);
+		    } else {
+				if(debug) console.log('clear ('+name+') '+Date.now());
+				callback();
+			}
+		});
+	}
+	tryToDoIt();
+}
+
+chrome.runtime.onMessage.addListener(function(request,sender,sendResponse){
+	if(debug){ console.log('runtime.onMessage()='); console.log({request:request,sender:sender}); }
+	if(sender.tab){
+		if(request.getIP){ getItemProcessing(function(ip){ sendResponse({ip:ip}); }); }
+		else if(request.setIP||request.setIP===""){ setItemProcessing(request.setIP,function(){ sendResponse({ok:'done'}); }); }
+	}
+	return true;
+});
+
+// only used by event.js so no communiction needed, other than to change itemDelay from options.js
+var itemDelay='';
+function waitUntil(time,name,callback){
+	var tryToDoIt = function(){
+		//if(debug) console.log('waitUntil '+time+' ('+name+') '+Date.now());
+		if(Date.now()<time){
+			if(debug) console.log('waitingUntil '+time+' ('+name+')..'+Date.now());
+			setTimeout(tryToDoIt,100);
+			return;
+		} else {
+			if(debug) console.log('wait expired '+time+' ('+name+') '+Date.now());
+			callback();
+			return;
+		}
+	}
+	tryToDoIt();
+}
 
 // simple toast https://github.com/mlcheng/js-toast/blob/master/toast.min.js
 "use strict";var iqwerty=iqwerty||{};iqwerty.toast=function(){function t(o,r,i){if(null!==e())t.prototype.toastQueue.push({text:o,options:r,transitions:i});else{t.prototype.Transitions=i||n;var a=r||{};a=t.prototype.mergeOptions(t.prototype.DEFAULT_SETTINGS,a),t.prototype.show(o,a),a=null}}function e(){return i}function o(t){i=t}var r=400,n={SHOW:{"-webkit-transition":"opacity "+r+"ms, -webkit-transform "+r+"ms",transition:"opacity "+r+"ms, transform "+r+"ms",opacity:"1","-webkit-transform":"translateY(-100%) translateZ(0)",transform:"translateY(-100%) translateZ(0)"},HIDE:{opacity:"0","-webkit-transform":"translateY(150%) translateZ(0)",transform:"translateY(150%) translateZ(0)"}},i=null;return t.prototype.DEFAULT_SETTINGS={style:{main:{background:"rgba(0, 0, 0, .85)","box-shadow":"0 0 10px rgba(0, 0, 0, .8)","border-radius":"3px","z-index":"99999",color:"rgba(255, 255, 255, .9)",padding:"10px 15px","max-width":"60%",width:"100%","word-break":"keep-all",margin:"0 auto","text-align":"center",position:"fixed",left:"0",right:"0",bottom:"0","-webkit-transform":"translateY(150%) translateZ(0)",transform:"translateY(150%) translateZ(0)","-webkit-filter":"blur(0)",opacity:"0"}},settings:{duration:4e3}},t.prototype.Transitions={},t.prototype.toastQueue=[],t.prototype.timeout=null,t.prototype.mergeOptions=function(e,o){var r=o;for(var n in e)r.hasOwnProperty(n)?null!==e[n]&&e[n].constructor===Object&&(r[n]=t.prototype.mergeOptions(e[n],r[n])):r[n]=e[n];return r},t.prototype.generate=function(r,n){var i=document.createElement("div");"string"==typeof r&&(r=document.createTextNode(r)),i.appendChild(r),o(i),i=null,t.prototype.stylize(e(),n)},t.prototype.stylize=function(t,e){Object.keys(e).forEach(function(o){t.style[o]=e[o]})},t.prototype.show=function(o,r){this.generate(o,r.style.main);var n=e();document.body.insertBefore(n,document.body.firstChild),n.offsetHeight,t.prototype.stylize(n,t.prototype.Transitions.SHOW),n=null,clearTimeout(t.prototype.timeout),t.prototype.timeout=setTimeout(t.prototype.hide,r.settings.duration)},t.prototype.hide=function(){var o=e();t.prototype.stylize(o,t.prototype.Transitions.HIDE),clearTimeout(t.prototype.timeout),o.addEventListener("transitionend",t.prototype.animationListener),o=null},t.prototype.animationListener=function(){e().removeEventListener("transitionend",t.prototype.animationListener),t.prototype.destroy.call(this)},t.prototype.destroy=function(){var r=e();if(document.body.removeChild(r),r=null,o(null),t.prototype.toastQueue.length>0){var n=t.prototype.toastQueue.shift();t(n.text,n.options,n.transitions),n=null}},{Toast:t}}(),"undefined"!=typeof module&&(module.exports=iqwerty.toast);

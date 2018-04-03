@@ -11,19 +11,16 @@
 - enable site field when add more sites
 
 ## options page (todo)
-- configurable polling for updated users rate
 - automatically append suggested text to reply, if available (no automatic pms due to captcha?)
 - automatically submit comment reply
 - add txid to reply or pm
-- notifications enabled
 
 ## event.js
 - dont set alarm until first tip queued
-- periodic polling for updated users
 
 ## misc
 - get and sync feerate globally only every 60s
-- firefox, opera and other browser support
+- firefox & edge support
 
 ## minor improvements / may not implement
 - don't allow queuing of dust amounts (currently lower than ~700), notify when queued send fails for that reason

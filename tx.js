@@ -1,10 +1,14 @@
 /* BCH Tips tx.js */
 function cancelQueued(d,u){
 	if(!confirm('Are you sure you want to cancel this tip to '+u+'?')) return;
-	chrome.storage.largeSync.get(['tx_queue'],function(o){
-		for(var j=0;j<o.tx_queue.length;j++) if(o.tx_queue[j][0]==d){ o.tx_queue.splice(j,1); break; }
-		chrome.storage.largeSync.set(o);
-		refreshData();
+	waitUntilClear('cancelQueued',function(){
+		setItemProcessing(1,function(){
+			chrome.storage.largeSync.get(['tx_queue'],function(o){
+				for(var j=0;j<o.tx_queue.length;j++) if(o.tx_queue[j][0]==d){ o.tx_queue.splice(j,1); break; }
+				chrome.storage.largeSync.set(o,function(){ setItemProcessing('',function(){}); });
+				refreshData();
+			});
+		});
 	});
 }
 /*function removeTx(d){
@@ -112,40 +116,46 @@ function tryQueued(item){
 	document.getElementById('t'+item[0]).innerHTML='Wait..';
 	if(txg.lock) return;
 	txg.lock=1;
-	chrome.storage.largeSync.get(['data','fee','tx_queue','tx_attempts'],function(o){
-		if(!o.data || !o.data.waddr || !o.data.wkey){
-			if(debug) console.log('no wallet addr/key set. aborting'); // todo: notify
-			return;
-		}
-		//if(o.tx_queue.indexOf(item)==-1){ if(debug){ console.log('item not found in tx_queue, abort'); return; } } // http://tinyurl.com/y9pmn3v6
-		var found=''; for(var i=0;i<o.tx_queue.length;i++){ if(o.tx_queue[i][0]==item[0]){ found=1; break; } }
-		if(!found){ if(debug) console.log('item not found in tx_queue, abort'); return; }
-		//if(debug){ console.log('ls o='); console.log(o); }
-		if(o && o.tx_queue && o.tx_queue.length>0){
-			console.log('finalitem='); console.log(item);
-			sendQueued([o,item],function(cb){
-				if(debug){ console.log('got callback cb='); console.log(cb); }
-				txg.lock='';
-				var tns=document.getElementsByClassName('trynow');
-				for(var i=0;i<tns.length;i++) tns[i].innerHTML='Try Now';
-				if(cb.error){
-					if(cb.m=='reddit profile') var toast='Error checking reddit profile. This should be temporary.';
-					else if(cb.m=='user database') var toast='Error checking BCH Tips user database. This should be temporary.';
-					else if(cb.m=='utxos') var toast='Error getting UTXOs. This should be temporary.';
-					else if(cb.m=='fee estimate') var toast='Error getting fee estimate. This should be temporary.';
-					else if(cb.m=='mempool conflict') var toast='Mempool conflict. Try again in a few seconds.';
-					else if(cb.m=='insufficient funds') var toast='Insufficient funds. Fund your wallet.';
-					else if(cb.m=='duplicate txid') var toast='Duplicate txid received. Try again in a few minutes.';
-					iqwerty.toast.Toast(toast,{style:{main:{'font-size':'16px',background:'rgba(170, 0, 0, .85)'}},settings:{duration:10000}})
-				} else if(cb.neutral){
-					if(cb.m=='no user address') var toast=cb.u+' hasn\'t added an address yet. Try again later.';
-					iqwerty.toast.Toast(toast,{style:{main:{'font-size':'16px',background:'rgba(0, 0, 0, .85)'}},settings:{duration:7000}})
-				} else if(cb.success){
-					if(cb.m=='tip sent') var toast='Tip sent to '+cb.u+'!';
-					iqwerty.toast.Toast(toast,{style:{main:{'font-size':'16px',background:'rgba(0, 85, 0, .85)'}},settings:{duration:7000}})
+	waitUntilClear('tx.js',function(){
+		setItemProcessing(1,function(){
+			chrome.storage.largeSync.get(['data','fee','tx_queue','tx_attempts'],function(o){
+				if(!o.data || !o.data.waddr || !o.data.wkey){
+					if(debug) console.log('no wallet addr/key set. aborting'); // todo: notify
+					setItemProcessing('',function(){});
+					return;
 				}
+				//if(o.tx_queue.indexOf(item)==-1){ if(debug){ console.log('item not found in tx_queue, abort'); return; } } // http://tinyurl.com/y9pmn3v6
+				var found=''; for(var i=0;i<o.tx_queue.length;i++){ if(o.tx_queue[i][0]==item[0]){ found=1; break; } }
+				if(!found){ if(debug) console.log('item not found in tx_queue, abort'); setItemProcessing('',function(){}); return; }
+				//if(debug){ console.log('ls o='); console.log(o); }
+				if(o && o.tx_queue && o.tx_queue.length>0){
+					if(debug){ console.log('finalitem='); console.log(item); }
+					sendQueued([o,item],function(cb){
+						setItemProcessing('',function(){});
+						if(debug){ console.log('got callback cb='); console.log(cb); }
+						txg.lock='';
+						var tns=document.getElementsByClassName('trynow');
+						for(var i=0;i<tns.length;i++) tns[i].innerHTML='Try Now';
+						if(cb.error){
+							if(cb.m=='reddit profile') var toast='Error checking reddit profile. This should be temporary.';
+							else if(cb.m=='user database') var toast='Error checking BCH Tips user database. This should be temporary.';
+							else if(cb.m=='utxos') var toast='Error getting UTXOs. This should be temporary.';
+							else if(cb.m=='fee estimate') var toast='Error getting fee estimate. This should be temporary.';
+							else if(cb.m=='mempool conflict') var toast='Mempool conflict. Try again in a few seconds.';
+							else if(cb.m=='insufficient funds') var toast='Insufficient funds. Fund your wallet.';
+							else if(cb.m=='duplicate txid') var toast='Duplicate txid received. Try again in a few minutes.';
+							iqwerty.toast.Toast(toast,{style:{main:{'font-size':'16px',background:'rgba(170, 0, 0, .85)'}},settings:{duration:10000}})
+						} else if(cb.neutral){
+							if(cb.m=='no user address') var toast=cb.u+' hasn\'t added an address yet. Try again later.';
+							iqwerty.toast.Toast(toast,{style:{main:{'font-size':'16px',background:'rgba(0, 0, 0, .85)'}},settings:{duration:7000}})
+						} else if(cb.success){
+							if(cb.m=='tip sent') var toast='Tip sent to '+cb.u+'!';
+							iqwerty.toast.Toast(toast,{style:{main:{'font-size':'16px',background:'rgba(0, 85, 0, .85)'}},settings:{duration:7000}})
+						}
+					});
+				} else setItemProcessing('',function(){});
 			});
-		}
+		});
 	});
 }
 
