@@ -1,3 +1,8 @@
+**1.0.16**
+
+* Fixed infinite loop when sending all with some UTXOs/amounts
+* Minor efficiency improvements
+
 **1.0.15**
 
 * Added customization of tip sent and queued messages with dynamic data including txid

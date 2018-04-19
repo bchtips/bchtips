@@ -47,27 +47,24 @@ function makeTx(utxos,waddr,wkey,toaddr,a,fr){
 		//console.log('utxos='); console.log(utxos);
 		//console.log('waddr='+waddr+' wkey='+wkey+' toaddr='+toaddr+' a='+a+' fr='+fr);
 		utxos=JSON.parse(utxos);
-		if(!utxos||utxos.length==0) return {status:0,msg:'no utxos'};
-		var fee=0, su=[], si=0;
+		if(!utxos||utxos.length===0) return {status:0,msg:'no utxos'};
+		var fee=0,su=[],si=0,st=0;
 		while(1){
-			if(!su[si]) su[si]={
-		        'txId':utxos[si].txid,
-		        'outputIndex':utxos[si].vout,
-		        'address':bchaddr.toLegacyAddress(utxos[si].address),
-		        'script':utxos[si].scriptPubKey,
-		        'satoshis':utxos[si].satoshis
+			if(!su[si]){
+				su[si]={
+			        'txId':utxos[si].txid,
+			        'outputIndex':utxos[si].vout,
+			        'address':bchaddr.toLegacyAddress(utxos[si].address),
+			        'script':utxos[si].scriptPubKey,
+			        'satoshis':utxos[si].satoshis
+				};
+				st+=su[si].satoshis;
 			}
-			var st=0;
-			for(var k in su) st+=su[k].satoshis;
 			var t=a+fee;
 			if(t<=st){
-				var tx=new bch.Transaction().fee(fee).from(su);
-				tx.to(bchaddr.toLegacyAddress(toaddr),a);
-				tx.change(bchaddr.toLegacyAddress(waddr)).sign(wkey);
+				var tx=new bch.Transaction().fee(fee).from(su).to(bchaddr.toLegacyAddress(toaddr),a).change(bchaddr.toLegacyAddress(waddr)).sign(wkey);
 				var fn=Math.ceil(tx.toString().length/2*fr); // fee needed
 				if(fn>fee){ fee=fn; continue; }
-				var us=[];
-				for(i=0;i<=si;i++) us.push(utxos[i].txid);
 				//console.log('to send: '+a+' + '+fee+' fee = '+t+'. within source utxo: '+st+'. good to send. tx='); console.log(tx);
 				return {status:1,tx:tx.toString()};
 			} else {
@@ -86,7 +83,6 @@ function makeTx(utxos,waddr,wkey,toaddr,a,fr){
 
 
 // try to send a queued tip
-// todo: fast local lock in case 2 sends at exact same time, i.e. queue + tx page
 function sendQueued(obj,callback){
 	var o=obj[0],item=obj[1],evp=obj[2]; // todo: improve // evp=is run from event page
 	// update last attempt time

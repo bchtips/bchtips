@@ -160,7 +160,7 @@ function updateTip(id){
 				document.getElementById('bchtip_feewarn'+id).innerHTML='';
 				updateEstimate(id);
 				return;
-			} else if(!utxos || utxos.length==0){
+			} else if(!utxos || utxos.length===0){
 				if(debug) console.log('id '+id+' !utxos || utxos.length==0');
 				document.getElementById('bchtip_send'+id).style.display='none';
 				document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Insufficient funds</span>';
@@ -171,82 +171,107 @@ function updateTip(id){
 			var fee=0;
 			var df=document.getElementById('bchtip_globals').getAttribute('data-fee');
 			var su=[]; // target source utxos
-			var si=0; // source index
-			// check utxos
-			while(1){
-				if(!su[si]) su[si]={ // add utxo
-			        'txId':utxos[si].txid,
-			        'outputIndex':utxos[si].vout,
-			        'address':bchaddr.toLegacyAddress(utxos[si].address),
-			        'script':utxos[si].scriptPubKey,
-			        'satoshis':utxos[si].satoshis
+
+			// send all
+			if(document.getElementById('bchtip_unit'+id).value=='all'){
+				// start with all utxos
+				var st=0; // source total
+				for(i=0;i<utxos.length;i++){
+					su[i]={
+				        'txId':utxos[i].txid,
+				        'outputIndex':utxos[i].vout,
+				        'address':bchaddr.toLegacyAddress(utxos[i].address),
+				        'script':utxos[i].scriptPubKey,
+				        'satoshis':utxos[i].satoshis
+					}
+					st+=su[i].satoshis;
 				}
-				var st=0; // total source utxos
-				for(var k in su) st+=su[k].satoshis;
-				var t=a+fee;
-				//if(debug){ console.log('a='+a+' fee='+fee+' t='+t+' st='+st+' su='); console.log(su); }
-				if(t<=st){
-					//if(debug) console.log('t<=st, crafting tx');
-					var tx=new bch.Transaction().fee(fee).from(su);
-					if(noaddr) tx.to(bchaddr.toLegacyAddress(o.data.waddr),a); else tx.to(bchaddr.toLegacyAddress(document.getElementById('bchtip_uaddr'+id).value),a);
-					tx.change(bchaddr.toLegacyAddress(o.data.waddr)).sign(o.data.wkey);
-					//if(debug) console.log('signedtoStringlen='+tx.toString().length);
-					//if(debug){ console.log('tx='); console.log(tx); }
-					var fn=Math.ceil(tx.toString().length/2*df); // fee needed
-					if(fn>fee){
-						//if(debug) console.log('fee '+fee+' not big enough.. setting to '+tx.toString().length/2);
-						fee=fn;
-						continue;
-					} else if(fn<fee-1){ // -1 avoids loop
-						if(document.getElementById('bchtip_unit'+id).value=='all'){
-							if(debug) console.log('fee '+fee+' too big, sending all, setting to '+tx.toString().length/2);
-							fee=fn;
-							a=st-fn;
-							document.getElementById('bchtip_amt'+id).value=BigNumber(a).div(100000000).toFixed(8);
-							continue;
-						} // todo: avoid "slightly overpaying fee" by adjusting here without causing/using loop - not easy due to 2 outputs after stepping off send all, change as fee, etc.
-					}
-					document.getElementById('bchtip_send'+id).style.display='';
-					document.getElementById('bchtip_send'+id).disabled=false;
-					var us=[];
-					for(i=0;i<=si;i++) us.push(utxos[i].txid);
-					document.getElementById('bchtip_tx'+id).value=tx.toString();
-					if(debug) console.log(a+' + '+fee+' fee = '+t+'. within source utxo: '+st+'. good to send.');
-				} else {
-					if(document.getElementById('bchtip_unit'+id).value=='all' && si==su.length-1 && fee>0){
-						// reduce amount
-						//if(debug) console.log('amount too big, sending all, set to st - fee');
-						a=st-fee;
-						document.getElementById('bchtip_amt'+id).value=BigNumber(a).div(100000000).toFixed(8);
-						continue;
-					}
-					// use change as fee
-					if(tx && tx.outputs && tx.outputs.length>1 && !utxos[si+1]){
-						//if(debug) console.log('trying change as fee');
-						fee=tx.outputs[tx.outputs.length-1].satoshis;
-						continue;
-					}
-					// add another utxo
-					//if(debug) console.log('t '+t+' > st '+st+'. need more utxos');
-					si++;
-					if(!utxos[si]){
-						//if(debug) console.log('no more utxos available. aborting');
+				var a=st;
+				while(1){
+					var t=a+fee;
+					if(a<1||t>st){
 						document.getElementById('bchtip_send'+id).style.display='none';
 						document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Insufficient funds</span>';
 						document.getElementById('bchtip_feewarn'+id).innerHTML='';
 						updateEstimate(id);
 						return;
 					}
-					continue;
+					var tx=new bch.Transaction().fee(fee).from(su);
+					if(noaddr) tx.to(bchaddr.toLegacyAddress(o.data.waddr),a); else tx.to(bchaddr.toLegacyAddress(document.getElementById('bchtip_uaddr'+id).value),a);
+					tx.change(bchaddr.toLegacyAddress(o.data.waddr)).sign(o.data.wkey);
+					var fn=Math.ceil(tx.toString().length/2*df); // fee needed
+					if(fn>fee){
+						fee=fn;
+						a=st-fee;
+						document.getElementById('bchtip_amt'+id).value=BigNumber(a).div(100000000).toFixed(8);
+						if(debug) console.log('not done fee needed='+fn+' fee='+fee);
+						continue;
+					}
+					if(debug) console.log('done. a='+a+' fee='+fee+' t='+t);
+					break;
 				}
-				break;
+			} else {
+				// calculate
+				var si=0, st=0; // source index, total
+				while(1){
+					if(!su[si]){
+						su[si]={ // add utxo
+					        'txId':utxos[si].txid,
+					        'outputIndex':utxos[si].vout,
+					        'address':bchaddr.toLegacyAddress(utxos[si].address),
+					        'script':utxos[si].scriptPubKey,
+					        'satoshis':utxos[si].satoshis
+						};
+						st+=su[si].satoshis;
+					}
+					var t=a+fee;
+					//if(debug){ console.log('a='+a+' fee='+fee+' t='+t+' st='+st+' su='); console.log(su); }
+					if(t<=st){
+						//if(debug) console.log('t<=st, crafting tx');
+						var tx=new bch.Transaction().fee(fee).from(su);
+						if(noaddr) tx.to(bchaddr.toLegacyAddress(o.data.waddr),a); else tx.to(bchaddr.toLegacyAddress(document.getElementById('bchtip_uaddr'+id).value),a);
+						tx.change(bchaddr.toLegacyAddress(o.data.waddr)).sign(o.data.wkey);
+						if(debug) console.log('signedtoStringlen='+tx.toString().length);
+						//if(debug){ console.log('tx='); console.log(tx); }
+						var fn=Math.ceil(tx.toString().length/2*df); // fee needed
+						if(fn>fee){
+							//if(debug) console.log('fee '+fee+' not big enough.. setting to '+tx.toString().length/2);
+							fee=fn;
+							continue;
+						} // todo: avoid "slightly overpaying fee" by adjusting here without causing/using loop - not easy due to 2 outputs after stepping off change as fee, etc.
+					} else {
+						// use change as fee
+						if(tx && tx.outputs && tx.outputs.length>1 && !utxos[si+1]){
+							//if(debug) console.log('trying change as fee');
+							fee=tx.outputs[tx.outputs.length-1].satoshis;
+							continue;
+						}
+						// add another utxo
+						//if(debug) console.log('t '+t+' > st '+st+'. need more utxos');
+						si++;
+						if(!utxos[si]){
+							//if(debug) console.log('no more utxos available. aborting');
+							document.getElementById('bchtip_send'+id).style.display='none';
+							document.getElementById('bchtip_fee'+id).innerHTML='<span class="bchtip_error">Insufficient funds</span>';
+							document.getElementById('bchtip_feewarn'+id).innerHTML='';
+							updateEstimate(id);
+							return;
+						}
+						continue;
+					}
+					break;
+				}
 			}
+			document.getElementById('bchtip_send'+id).style.display='';
+			document.getElementById('bchtip_send'+id).disabled=false;
+			document.getElementById('bchtip_tx'+id).value=tx.toString();
+			if(debug) console.log(a+' + '+fee+' fee = '+t+'. within source utxo: '+st+'. good to send.');
 			document.getElementById('bchtip_fee'+id).innerHTML='+ '+fee+' sat fee = '+satToUnit(fee+a,'bch')+' BCH';
 			// check for small change amount
 			if(tx && tx.outputs && tx.outputs.length>1 && tx.outputs[tx.outputs.length-1].satoshis<250){
 				if(!utxos[si+1]) var oa=' or All'; else var oa='';
 				document.getElementById('bchtip_feewarn'+id).innerHTML='<span class="bchtip_warn">Inefficient change ('+tx.outputs[tx.outputs.length-1].satoshis+' sat is <250). Consider sending more'+oa+'.</span><br>';
-			} else if(tx && fee-2 > fn){
+			} else if(tx && fee-3 > fn){
 				document.getElementById('bchtip_feewarn'+id).innerHTML='<span class="bchtip_warn">Slightly overpaying fee.</span><br>';
 			} else document.getElementById('bchtip_feewarn'+id).innerHTML='';
 			if(noaddr) document.getElementById('bchtip_feewarn'+id).innerHTML+='This is just an estimate. Balance and fees at sending time will affect results.<br>';
