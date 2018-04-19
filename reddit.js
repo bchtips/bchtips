@@ -117,7 +117,6 @@ function showReplyText(b,id,txid){
 			var rtext='';
 			var rlink='(<a id="bchtip_areply'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">add to reply</a>) ';
 		}
-		if(document.getElementById('bchtip_globals').getAttribute('data-archived')) t1=t2;
 		document.getElementById('bchtip_reply'+id).innerHTML=rtext+'Suggested message '+rlink+'(<a id="bchtip_sendpm'+id+'" class="bchtip" target="_blank" href="/message/compose/?to='+document.getElementById('bchtip_div'+id).getAttribute('data-author')+'&subject='+encodeURIComponent('I sent you a tip!')+'&message='+encodeURIComponent(t2)+'">send pm</a>):<br><textarea id="bchtip_replytxt'+id+'" class="bchtip_replytxt" disabled="disabled">'+t1+'</textarea><br>';
 		document.getElementById('bchtip_replytxt'+id).style.height='1px';
 		document.getElementById('bchtip_replytxt'+id).style.height=(document.getElementById('bchtip_replytxt'+id).scrollHeight+3)+'px'; // auto height
@@ -462,11 +461,10 @@ function sendTipClicked(d){
 												if(r.txid){
 													chrome.storage.largeSync.get(['tx_sent'],function(o){
 														if(!o.tx_sent) o.tx_sent=[];
-														// check dupe
 														for(var i=0;i<o.tx_sent.length;i++){
 															if(o.tx_sent[i][4]==r.txid){
 																setItemProcessingCS('',function(){});
-																if(debug) console.log('duplicate txid '+r.txid+' not really sent, skipping for now');
+																if(debug) console.log('duplicate txid '+r.txid+' not really sent');
 																document.getElementById('bchtip_inwrap2_'+id).innerHTML='<span class="bchtip_error">Got duplicate txid - tip not sent. Try again in a few minutes or with a different amount.</span> ';
 																resetTipBoxLink(id);
 																return;
