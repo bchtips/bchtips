@@ -4,3 +4,4 @@
 * Increased Queue Item Delay minimum to 3 seconds to avoid sync limits
 * Added detection of duplicate txids when sending the same amount twice in a row quickly (server ignored tx)
 * Fixed a bug in public address detection where final line break wasn't being stripped properly
+* Fixed price occasionally being half what it should be due to mishandled bad API response
