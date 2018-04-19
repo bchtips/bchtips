@@ -20,6 +20,9 @@ BCH Tips is a browser extension for easy, trustless tipping with Bitcoin Cash on
 
 * It's not necessary to wait for confirmations when funding your wallet or sending tips. The current UTXOs are used to calculate your available tipping balance and they are updated within seconds of sending and receiving.
 
+* Tip messages are customizable and can be included with your comments to keep clutter to a minimum.
+
+
 **Reddit Usage**
 
 Each post and comment features a new "send tip" link in the toolbar. When clicked, the poster's user profile page will be searched for a Bitcoin Cash address, with or without the bitcoincash: prefix. If an address is not found a request will be made to our database to see if the user has submitted an address. Tip and optional reply (if available) and PM options will appear on the page. After choosing the tip amount and submitting, if an address was found the transaction will be transmitted. If an address was not found the tip will be pending until the user adds an address to their profile or submits an address via [PM to bchtips](https://www.reddit.com/message/compose/?to=bchtips&subject=my%20bitcoin%20cash%20address) (the address may appear anywhere in the subject or message body). Once the user has an address the extension will automatically send the tip you authorized next time you're online. You can view a history of tips you have sent and monitor the progress of acceptance and confirmation by clicking the extension icon in your browser toolbar.
