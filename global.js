@@ -119,8 +119,8 @@ function sendQueued(obj,callback){
 		// check if got an address
 		var uaddr='';
 		if(ujs.data.public_description && ujs.kind=='t5'){
-			var tmp=ujs.data.public_description.replace('\\n','').split(' ');
-			if(debug) console.log('ujs.data.public_description='+tmp);
+			var tmp=ujs.data.public_description.replace(/\n/gm,'').split(' ');
+			if(debug){ console.log('ujs.data.public_description='); console.log(tmp); }
 			for(i=tmp.length;i>=0;i--) try { if(bchaddr.isCashAddress(tmp[i])==true) uaddr=tmp[i].replace('bitcoincash:',''); } catch(e){}
 			if(uaddr&&debug) console.log('got address from public description: '+uaddr);
 		}

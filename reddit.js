@@ -98,45 +98,47 @@ function updateEstimate(id,bo){
 	}
 }
 
-function showReplyText(b,id){
-	if(document.getElementById('bchtip_div'+id).getAttribute('data-top')) var typ='post'; else var typ='comment';
-	var fyp=' for [your '+typ+']('+document.getElementById('bchtip_div'+id).getAttribute('data-url')+')';
-	if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
-		var t1='I sent you a tip of '+b+' with [BCH Tips](/r/bchtips)!';
-		var t2='I sent you a tip of '+b+fyp+' with [BCH Tips](/r/bchtips)!';
-	} else {
-		var t1='I tipped you '+b+'! [How to collect](https://redd.it/7xwesx)';
-		var t2='I tipped you '+b+fyp+'! [How to collect](https://redd.it/7xwesx)';
-	}
-	if(document.getElementById('bchtip_globals').getAttribute('data-archived')||document.getElementById('bchtip_div'+id).getAttribute('data-noreply')){
-		var rtext='Reply unavailable. ';
-		var rlink='';
-		t1=t2;
-	} else {
-		var rtext='';
-		var rlink='(<a id="bchtip_areply'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">add to reply</a>) ';
-	}
-	if(document.getElementById('bchtip_globals').getAttribute('data-archived')) t1=t2;
-	document.getElementById('bchtip_reply'+id).innerHTML=rtext+'Suggested message '+rlink+'(<a id="bchtip_sendpm'+id+'" class="bchtip" target="_blank" href="/message/compose/?to='+document.getElementById('bchtip_div'+id).getAttribute('data-author')+'&subject='+encodeURIComponent('I sent you a tip!')+'&message='+encodeURIComponent(t2)+'">send pm</a>):<br><textarea id="bchtip_replytxt'+id+'" class="bchtip_replytxt" disabled="disabled">'+t1+'</textarea><br>';
-	document.getElementById('bchtip_replytxt'+id).style.height='1px';
-	document.getElementById('bchtip_replytxt'+id).style.height=(document.getElementById('bchtip_replytxt'+id).scrollHeight+3)+'px'; // auto height
-	// add to reply clicked
-	if(document.getElementById('bchtip_areply'+id)) document.getElementById('bchtip_areply'+id).addEventListener('click', function(){
-		var id=this.getAttribute('data-id');
-		var t=document.getElementById('bchtip_replytxt'+id).value;
-		if(debug) console.log('t='+t);
-		if(this.parentNode.parentNode.parentNode.previousSibling.classList.contains('entry')) var c=this.parentNode.parentNode.parentNode.previousSibling; // bottom, depends on traversing bchtip_div elements
-		else var c=findAncestor(this,'entry'); // top
-		if(document.getElementById('bchtip_div'+id).getAttribute('data-top')) var f=document.getElementsByClassName('usertext cloneable warn-on-unload')[0];
-		else var f=c.nextSibling.nextSibling.getElementsByTagName('form')[0];
-		f.text.value=f.text.value.trim();
-		if(f.text.value) f.text.value+='\n\n';
-		f.text.value+=t;
-		f.text.scrollTop=f.text.scrollHeight;
+function showReplyText(b,id,txid){
+	chrome.storage.largeSync.get(['options'],function(o){
+		if(document.getElementById('bchtip_div'+id).getAttribute('data-top')) var typ='post'; else var typ='comment';
+		var fyp=' for [your '+typ+']('+document.getElementById('bchtip_div'+id).getAttribute('data-url')+')';
+		if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
+			var t1=o.options.tip_sent_msg.replace('{amount}',b).replace('{foryourpost}','').replace('{txid}',txid).replace('{bchtips}','[BCH Tips](/r/bchtips)');
+			var t2=o.options.tip_sent_msg.replace('{amount}',b).replace('{foryourpost}',fyp).replace('{txid}',txid).replace('{bchtips}','[BCH Tips](/r/bchtips)');
+		} else {
+			var t1=o.options.tip_queued_msg.replace('{amount}',b).replace('{foryourpost}','').replace('{bchtips}','[BCH Tips](/r/bchtips)').replace('{howto}','[How to collect](https://redd.it/7xwesx)');
+			var t2=o.options.tip_queued_msg.replace('{amount}',b).replace('{foryourpost}',fyp).replace('{bchtips}','[BCH Tips](/r/bchtips)').replace('{howto}','[How to collect](https://redd.it/7xwesx)');
+		}
+		if(document.getElementById('bchtip_globals').getAttribute('data-archived')||document.getElementById('bchtip_div'+id).getAttribute('data-noreply')){
+			var rtext='Reply unavailable. ';
+			var rlink='';
+			t1=t2;
+		} else {
+			var rtext='';
+			var rlink='(<a id="bchtip_areply'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">add to reply</a>) ';
+		}
+		if(document.getElementById('bchtip_globals').getAttribute('data-archived')) t1=t2;
+		document.getElementById('bchtip_reply'+id).innerHTML=rtext+'Suggested message '+rlink+'(<a id="bchtip_sendpm'+id+'" class="bchtip" target="_blank" href="/message/compose/?to='+document.getElementById('bchtip_div'+id).getAttribute('data-author')+'&subject='+encodeURIComponent('I sent you a tip!')+'&message='+encodeURIComponent(t2)+'">send pm</a>):<br><textarea id="bchtip_replytxt'+id+'" class="bchtip_replytxt" disabled="disabled">'+t1+'</textarea><br>';
+		document.getElementById('bchtip_replytxt'+id).style.height='1px';
+		document.getElementById('bchtip_replytxt'+id).style.height=(document.getElementById('bchtip_replytxt'+id).scrollHeight+3)+'px'; // auto height
+		// add to reply clicked
+		if(document.getElementById('bchtip_areply'+id)) document.getElementById('bchtip_areply'+id).addEventListener('click', function(){
+			var id=this.getAttribute('data-id');
+			var t=document.getElementById('bchtip_replytxt'+id).value;
+			if(debug) console.log('t='+t);
+			if(this.parentNode.parentNode.parentNode.previousSibling.classList.contains('entry')) var c=this.parentNode.parentNode.parentNode.previousSibling; // bottom, depends on traversing bchtip_div elements
+			else var c=findAncestor(this,'entry'); // top
+			if(document.getElementById('bchtip_div'+id).getAttribute('data-top')) var f=document.getElementsByClassName('usertext cloneable warn-on-unload')[0];
+			else var f=c.nextSibling.nextSibling.getElementsByTagName('form')[0];
+			f.text.value=f.text.value.trim();
+			if(f.text.value) f.text.value+='\n\n';
+			f.text.value+=t;
+			f.text.scrollTop=f.text.scrollHeight;
+		});
+		var func=function(ev){ for(i=0;i<2;i++) document.getElementById('bchtip_reply'+ev.srcElement.getAttribute('data-id')).click(); }
+		document.getElementById('bchtip_reply'+id).addEventListener('transitionend',func,false);
+		document.getElementById('bchtip_reply'+id).classList.remove('bchtip_r_collapse');
 	});
-	var func=function(ev){ for(i=0;i<2;i++) document.getElementById('bchtip_reply'+ev.srcElement.getAttribute('data-id')).click(); }
-	document.getElementById('bchtip_reply'+id).addEventListener('transitionend',func,false);
-	document.getElementById('bchtip_reply'+id).classList.remove('bchtip_r_collapse');
 }
 
 // calculate fee and build tx
@@ -260,6 +262,11 @@ function updateTip(id){
 	});
 }
 
+function resetTipBoxLink(id){
+	document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'" style="white-space:nowrap">reset tip box</a>)<br>';
+	document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(id); });
+}
+
 function resetTipBox(id){
 	if(debug) console.log('resetTipBox('+id+')');
 	var func=function(ev){ for(i=0;i<2;i++) document.getElementById('bchtip'+ev.srcElement.getAttribute('data-id')).click(); }
@@ -312,8 +319,8 @@ function sendTipClicked(d){
 				var uaddr='';
 				//if(debug){ console.log('x0.responseText='); console.log(x0.responseText); }
 				if(ujs.data.public_description && ujs.kind=='t5'){
-					var tmp=ujs.data.public_description.replace('\\n','').split(' ');
-					if(debug) console.log('ujs.data.public_description='+tmp);
+					var tmp=ujs.data.public_description.replace(/\n/gm,'').split(' ');
+					if(debug){ console.log('ujs.data.public_description='); console.log(tmp); }
 					for(i=tmp.length;i>=0;i--) try { if(bchaddr.isCashAddress(tmp[i])==true) uaddr=tmp[i].replace('bitcoincash:',''); } catch(e){}
 					if(uaddr&&debug) console.log('got address from public description: '+uaddr);
 				}
@@ -421,6 +428,7 @@ function sendTipClicked(d){
 				});
 				document.getElementById('bchtip_send'+id).addEventListener('click', function(){
 					var id=this.getAttribute('data-id');
+					document.getElementById('bchtip_send'+id).disabled=true;
 					waitUntilClearCS('cs',function(){
 						setItemProcessingCS(1,function(){
 							var a=getSatAmt(id);
@@ -433,8 +441,6 @@ function sendTipClicked(d){
 							if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')) document.getElementById('bchtip_inwrap2_'+id).innerHTML='Sent '+b1+' to '+d[1]+'! '; else document.getElementById('bchtip_inwrap2_'+id).innerHTML='Queued '+b1+' to '+d[1]+'! ';
 							document.getElementById('bchtip_inwrap2_'+id).style.display='';
 							document.getElementById('bchtip_div'+id).setAttribute('data-sent',1);
-							// set and expand suggested msg
-							showReplyText(b1,id);
 							// send
 							chrome.storage.largeSync.set({lastsend:{amt:document.getElementById('bchtip_amt'+id).value,unit:document.getElementById('bchtip_unit'+id).value}});
 							if(document.getElementById('bchtip_div'+id).getAttribute('data-hasaddr')){
@@ -452,12 +458,23 @@ function sendTipClicked(d){
 												try { var r=JSON.parse(x.responseText); } catch(e) { document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error parsing response: '+x.responseText+'</span> '; if(debug) console.log('error parsing response: '+x.responseText); }
 												if(debug){ console.log('r='); console.log(r); }
 												setTimeout(function(){ updateUtxos(); },10000);
-												if(r.txid) document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view tx</a>) ';
-												document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
-												document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(id); });
-												// add to tx_sent
+												// add to tx_sent if not a dupe
 												if(r.txid){
 													chrome.storage.largeSync.get(['tx_sent'],function(o){
+														if(!o.tx_sent) o.tx_sent=[];
+														// check dupe
+														for(var i=0;i<o.tx_sent.length;i++){
+															if(o.tx_sent[i][4]==r.txid){
+																setItemProcessingCS('',function(){});
+																if(debug) console.log('duplicate txid '+r.txid+' not really sent, skipping for now');
+																document.getElementById('bchtip_inwrap2_'+id).innerHTML='<span class="bchtip_error">Got duplicate txid - tip not sent. Try again in a few minutes or with a different amount.</span> ';
+																resetTipBoxLink(id);
+																return;
+															}
+														}
+														document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view tx</a>) ';
+														resetTipBoxLink(id);
+														showReplyText(b1,id,r.txid);
 														if(debug){ console.log('ls o='); console.log(o); }
 														if(!o || !o.tx_sent){ o={}; o.tx_sent=[]; }
 														o.tx_sent.push([Date.now(),b2,d[1],d[2],r.txid,'r']); // 0=time 1=amt 2=user 3=url 4=txid 5=site(r,t)
@@ -471,13 +488,13 @@ function sendTipClicked(d){
 									if(senderr){
 										setItemProcessingCS('',function(){});
 										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='<span class="bchtip_error">Error '+x.response+'</span> ';
-										document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a id="bchtip_reset'+id+'" class="bchtip" href="javascript:;" data-id="'+id+'">reset tip box</a>)<br>';
-										document.getElementById('bchtip_reset'+id).addEventListener('click',function(){ resetTipBox(this.getAttribute('data-id')); });
+										resetTipBoxLink(id);
 										if(debug){ console.log("transmit error x="); console.log(x); }
 									}
 								}
 								x.send('rawtx='+tx);
 							} else { // queue
+								showReplyText(b1,id);
 								if(debug) console.log('queuing..');
 								chrome.storage.largeSync.get(['tx_queue'],function(o){
 									if(debug){ console.log('ls o='); console.log(o); }
@@ -561,7 +578,6 @@ function updateRate(){
 			if(debug) console.log('not time to update rate, stored rate='+o.rate_last_value);
 			document.getElementById('bchtip_globals').setAttribute('data-rate',o.rate_last_value);
 		} else {
-			chrome.storage.largeSync.set({rate_last_time:Date.now()});
 			var x=new XMLHttpRequest(); x.timeout=15000;
 			x.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 			x.onreadystatechange=function(){
@@ -571,7 +587,7 @@ function updateRate(){
 						if(debug) console.log('rate='+x.responseText);
 						if(x.responseText){
 							if(!isNaN(x.responseText)){
-								chrome.storage.largeSync.set({rate_last_value:x.responseText});
+								chrome.storage.largeSync.set({rate_last_time:Date.now(),rate_last_value:x.responseText});
 								document.getElementById('bchtip_globals').setAttribute('data-rate',x.responseText);
 							} else var raterr=1;
 						} else var raterr=1;
