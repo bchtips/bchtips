@@ -1,3 +1,7 @@
+**1.0.17**
+
+* Updated explorer URLs
+
 **1.0.16**
 
 * Fixed infinite loop when sending all with some UTXOs/amounts

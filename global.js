@@ -210,7 +210,7 @@ function sendQueued(obj,callback){
 															// add to listener object
 															chrome.storage.local.get('notifs',function(on){
 																if(!on || !on.notifs){ on={}; on.notifs={}; }
-																on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/insight/tx/'+r.txid];
+																on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/tx/'+r.txid];
 																//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
 																chrome.storage.local.set({notifs:on.notifs});
 															});

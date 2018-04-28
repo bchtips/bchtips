@@ -495,7 +495,7 @@ function sendTipClicked(d){
 																return;
 															}
 														}
-														document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/insight/tx/'+r.txid+'">view tx</a>) ';
+														document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/tx/'+r.txid+'">view tx</a>) ';
 														resetTipBoxLink(id);
 														showReplyText(b1,id,r.txid);
 														if(debug){ console.log('ls o='); console.log(o); }
