@@ -30,7 +30,7 @@ function updateBalance(){
 		return;
 	}
 	
-	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://blockdozer.com/insight-api/addr/"+waddr,true);
+	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://blockdozer.com/api/addr/"+waddr,true);
 	var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 	var xs=[x0,x1];
 	onRequestsComplete(xs, function(xr, xerr){

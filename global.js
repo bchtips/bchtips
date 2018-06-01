@@ -133,10 +133,10 @@ function sendQueued(obj,callback){
 
 		// got an address, get utxos and fee estimate
 		if(!o.fee || !o.fee.last || !o.fee.val || (Date.now()-o.fee.last>60000)) var dofee=1; else var dofee='';
-		var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://blockdozer.com/insight-api/addr/"+o.data.waddr+"/utxo",true);
+		var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://blockdozer.com/api/addr/"+o.data.waddr+"/utxo",true);
 		if(dofee){
 			if(debug) console.log('updating fee');
-			var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/insight-api/utils/estimatefee/",true);
+			var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/api/utils/estimatefee/",true);
 			var xs1=[x2,x3];
 		} else var xs1=[x2];
 		onRequestsComplete(xs1, function(xr, xerr){
@@ -167,7 +167,7 @@ function sendQueued(obj,callback){
 			if(tx.status==1){
 				//if(debug) console.log('sending tx');
 				var x=new XMLHttpRequest();
-				x.open("POST","https://blockdozer.com/insight-api/tx/send",true);
+				x.open("POST","https://blockdozer.com/api/tx/send",true);
 				x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
 				x.onreadystatechange=function(){
 					if(x.readyState==4){

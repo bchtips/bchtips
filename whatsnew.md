@@ -1,3 +1,7 @@
+**1.0.18**
+
+* Updated API URLs
+
 **1.0.17**
 
 * Updated explorer URLs
