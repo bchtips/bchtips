@@ -322,8 +322,8 @@ function sendTipClicked(d){
 			if(document.getElementsByClassName('bchtip_div').length==1) var dorate=1; else dorate=false; // only load rate+utxos on first tip open, else intervals running
 			if(dorate){ // also do utxos
 				var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
-				var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/api/addr/"+o.data.waddr+"/utxo",true);
-				var x4=new XMLHttpRequest(); x4.timeout=15000; x4.open("GET","https://blockdozer.com/api/utils/estimatefee/",true);
+				var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://cashexplorer.bitcoin.com/api/addr/"+bchaddr.toLegacyAddress(o.data.waddr)+"/utxo",true);
+				var x4=new XMLHttpRequest(); x4.timeout=15000; x4.open("GET","https://cashexplorer.bitcoin.com/api/utils/estimatefee/",true);
 				var xs=[x0,x1,x2,x3,x4];
 			} else var xs=[x0,x1];
 			onRequestsComplete(xs, function(xr, xerr){
@@ -472,7 +472,7 @@ function sendTipClicked(d){
 								if(debug) console.log('sending tx='+tx);
 								// refresh utxos? they're 21s fresh anyway..
 								var x=new XMLHttpRequest();
-								x.open("POST","https://blockdozer.com/api/tx/send",true);
+								x.open("POST","https://bchftw.com/bchtips/send.php",true);
 								x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
 								x.onreadystatechange=function(){
 									if(x.readyState==4){
@@ -495,7 +495,7 @@ function sendTipClicked(d){
 																return;
 															}
 														}
-														document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://blockdozer.com/tx/'+r.txid+'">view tx</a>) ';
+														document.getElementById('bchtip_inwrap2_'+id).innerHTML+='(<a class="bchtip" target="_blank" href="https://explorer.bitcoin.com/bch/tx/'+r.txid+'">view tx</a>) ';
 														resetTipBoxLink(id);
 														showReplyText(b1,id,r.txid);
 														if(debug){ console.log('ls o='); console.log(o); }
@@ -632,7 +632,7 @@ function updateUtxos(){
 		if(!o.data || !o.data.waddr){ if(debug) console.log('no wallet, aborting'); return; }
 		var x=new XMLHttpRequest();
 		x.timeout=15000;
-		x.open("GET","https://blockdozer.com/api/addr/"+o.data.waddr+"/utxo");
+		x.open("GET","https://cashexplorer.bitcoin.com/api/addr/"+bchaddr.toLegacyAddress(o.data.waddr)+"/utxo");
 		x.onreadystatechange=function(){
 			if(x.readyState==4){
 				if(x.status==200){

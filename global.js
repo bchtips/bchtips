@@ -133,10 +133,10 @@ function sendQueued(obj,callback){
 
 		// got an address, get utxos and fee estimate
 		if(!o.fee || !o.fee.last || !o.fee.val || (Date.now()-o.fee.last>60000)) var dofee=1; else var dofee='';
-		var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://blockdozer.com/api/addr/"+o.data.waddr+"/utxo",true);
+		var x2=new XMLHttpRequest(); x2.timeout=15000; x2.open("GET","https://cashexplorer.bitcoin.com/api/addr/"+bchaddr.toLegacyAddress(o.data.waddr)+"/utxo",true);
 		if(dofee){
 			if(debug) console.log('updating fee');
-			var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://blockdozer.com/api/utils/estimatefee/",true);
+			var x3=new XMLHttpRequest(); x3.timeout=15000; x3.open("GET","https://cashexplorer.bitcoin.com/api/utils/estimatefee/",true);
 			var xs1=[x2,x3];
 		} else var xs1=[x2];
 		onRequestsComplete(xs1, function(xr, xerr){
@@ -167,7 +167,7 @@ function sendQueued(obj,callback){
 			if(tx.status==1){
 				//if(debug) console.log('sending tx');
 				var x=new XMLHttpRequest();
-				x.open("POST","https://blockdozer.com/api/tx/send",true);
+				x.open("POST","https://bchftw.com/bchtips/send.php",true);
 				x.setRequestHeader("Content-type","application/x-www-form-urlencoded");
 				x.onreadystatechange=function(){
 					if(x.readyState==4){
@@ -210,7 +210,7 @@ function sendQueued(obj,callback){
 															// add to listener object
 															chrome.storage.local.get('notifs',function(on){
 																if(!on || !on.notifs){ on={}; on.notifs={}; }
-																on.notifs[id]=['https://www.reddit.com'+item[3],'https://blockdozer.com/tx/'+r.txid];
+																on.notifs[id]=['https://www.reddit.com'+item[3],'https://cashexplorer.bitcoin.com/tx/'+r.txid];
 																//if(debug){ console.log('created notif id='+id+' notifs='); console.log(on.notifs); }
 																chrome.storage.local.set({notifs:on.notifs});
 															});

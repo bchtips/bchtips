@@ -30,7 +30,7 @@ function updateBalance(){
 		return;
 	}
 	
-	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://blockdozer.com/api/addr/"+waddr,true);
+	var x0=new XMLHttpRequest(); x0.timeout=15000; x0.open("GET","https://cashexplorer.bitcoin.com/api/addr/"+bchaddr.toLegacyAddress(waddr),true);
 	var x1=new XMLHttpRequest(); x1.timeout=15000; x1.open("GET","https://cdn.bchftw.com/bchtips/bchprice.csv",true);
 	var xs=[x0,x1];
 	onRequestsComplete(xs, function(xr, xerr){
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 				if(!sitestatus) sitestatus='Browse to a supported site to start tipping!';
 
-				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl=bitcoincash:'+waddr+'"><br></span></span><span id="wleg_wrap" style="display:none">'+wleg+'<br><span id="wlegqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+wleg+'"><br></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://blockdozer.com/address/'+waddr+'" title="Explore Address on Blockdozer" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
+				document.body.innerHTML+='<br><span id="waddr_wrap">'+waddr+'<br><span id="waddrqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl=bitcoincash:'+waddr+'"><br></span></span><span id="wleg_wrap" style="display:none">'+wleg+'<br><span id="wlegqr" style="display:none"><img src="http://chart.apis.google.com/chart?chs=240x240&cht=qr&choe=ISO-8859-1&chl='+wleg+'"><br></span></span><div id="byline"><a target="_blank" href="tx.html" title="Transaction History & Queue">Transactions</a> | <a target="_blank" href="https://explorer.bitcoin.com/address/bitcoincash:'+waddr+'" title="Explore Address" id="vb">Explore</a> | <a href="#" title="Toggle QR Code" id="sqr">Show QR</a> | <a href="#" title="Toggle Format" id="frm"></a> | <a href="#" title="Remove address" id="rw">Remove</a></div>';
 				//document.body.innerHTML+='Key:<br>'+obj.data.wkey+'<br><br>';
 				document.body.innerHTML+='<div id="bal_wrap">Balance:<br><div id="wbal">&nbsp;</div><div id="wbal_usd">&nbsp;</div>';
 				footer();

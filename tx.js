@@ -87,7 +87,7 @@ function refreshData(){
 				+'<td>'+o.tx_sent[i][1]+'</td>'
 				+'<td><a target="_blank" href="https://www.reddit.com/user/'+o.tx_sent[i][2]+'">'+o.tx_sent[i][2]+'</a></td>'
 				+'<td><a target="_blank" href="https://www.reddit.com'+o.tx_sent[i][3]+'">View Post</a></td>'
-				+'<td><a target="_blank" href="https://blockdozer.com/tx/'+o.tx_sent[i][4]+'">View Tx</a></td>'
+				+'<td><a target="_blank" href="https://explorer.bitcoin.com/bch/tx/'+o.tx_sent[i][4]+'">View Tx</a></td>'
 				//+'<td><a id="c'+i+'" data-i='+i+' data-d="'+o.tx_sent[i][0]+'" href="#">Remove</a></td>'
 				+'</tr>';
 				html+=row;

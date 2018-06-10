@@ -1,3 +1,7 @@
+**1.0.19**
+
+* Fixed sending issue and changed to bitcoin.com API and explorer
+
 **1.0.18**
 
 * Updated API URLs
