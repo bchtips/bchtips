@@ -16,7 +16,7 @@ BCH Tips is a browser extension for easy, trustless tipping with Bitcoin Cash on
 
 * Queuing of tips to people without addresses and automatic background sending when they add one.
 
-* Transactions are almost always sent with 1 sat/B fees. Blockdozer ensures quick relaying and provides an estimate we use in case a higher fee is ever needed.
+* Transactions are almost always sent with 1 sat/B fees.
 
 * It's not necessary to wait for confirmations when funding your wallet or sending tips. The current UTXOs are used to calculate your available tipping balance and they are updated within seconds of sending and receiving.
 
