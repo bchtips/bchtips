@@ -29,7 +29,7 @@ Each post and comment features a new "send tip" link in the toolbar. When clicke
 
 **Have feedback or just want to hang out?**
 
-BCH Tips is on [Reddit](https://www.reddit.com/r/bchtips), [Twitter](https://twitter.com/bchtips), [GitHub](https://github.com/bchtips/bchtips/) and you can find the author on [FreeNode](https://webchat.freenode.net/) in #bitcoincash as dw1, repping Bitcoin Cash every day. (I now have op status to help keep a lid on any overly-abusive trolls - thanks freetrader!). You may also recognize me as [@BCHftw](https://twitter.com/BCHftw) and [/u/bch_ftw](https://www.reddit.com/r/bch_ftw). I love Bitcoin Cash and am a pretty laid back and thoughtful guy so don't be shy.
+BCH Tips is on [Reddit](https://www.reddit.com/r/bchtips), [Twitter](https://twitter.com/bchtips), [GitHub](https://github.com/bchtips/bchtips/) and you can find the author on [FreeNode](https://webchat.freenode.net/) in #bitcoincash as dw1, repping Bitcoin Cash every day. (I now have op status to help keep a lid on any overly-abusive trolls - thanks freetrader!). You may also recognize me as [@BCHftw](https://twitter.com/BCHftw) and [/u/bch_ftw](https://www.reddit.com/user/bch_ftw). I love Bitcoin Cash and am a pretty laid back and thoughtful guy so don't be shy.
 
 **Support our work (We need it! Thank you!!)**
 
