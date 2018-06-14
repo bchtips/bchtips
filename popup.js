@@ -54,7 +54,7 @@ function updateBalance(){
 }
 
 function footer(){
-	document.body.innerHTML+='<div id="foot_wrap"><a target="_blank" href="https://github.com/bchtips/bchtips/blob/master/README.md">GitHub</a> | <a target="_blank" href="https://twitter.com/bchtips">Twitter</a>  | <a target="_blank" href="https://www.reddit.com/r/bchtips">Reddit</a> | <a target="_blank" href="https://www.reddit.com/r/bchtips/comments/7xwnqq/bch_tips_is_the_easiest_and_most_secure_bitcoin/#tip" id="tipauthor">Tip the author!</a></div>';
+	document.body.innerHTML+='<div id="foot_wrap"><a target="_blank" href="https://github.com/bchtips/bchtips/blob/master/readme.md">GitHub</a> | <a target="_blank" href="https://twitter.com/bchtips">Twitter</a>  | <a target="_blank" href="https://www.reddit.com/r/bchtips">Reddit</a> | <a target="_blank" href="https://www.reddit.com/r/bchtips/comments/7xwnqq/bch_tips_is_the_easiest_and_most_secure_bitcoin/#tip" id="tipauthor">Tip the author!</a></div>';
 }
 
 var valid_site_urls=['https://www.reddit.com'];//,'https://twitter.com/'];
