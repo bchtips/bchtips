@@ -4,7 +4,7 @@ If you forgot your private key, click the BCH Tips icon in the toolbar, within t
 
 `chrome.storage.largeSync.get(['data'],c=>{ console.log(c.data.wkey); });`
 
-You can do whatever you want with the code in this repository.
+You can do whatever you want with the code in this repository. If you want a copy of the backend scripts email bchtips@hotmail.com
 
 ---
 
