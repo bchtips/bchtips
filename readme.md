@@ -1,3 +1,7 @@
+* BCH Tips has been discontinued. Transfer all funds to another wallet. *
+If you forgot your private key, click the BCH Tips icon in the toolbar, right click > Inspect, and run the following in Console:
+`chrome.storage.largeSync.get(['data'],c=>{ console.log(c.data.wkey); });`
+---
 BCH Tips is a browser extension for easy, trustless tipping with Bitcoin Cash on social media.
 
 [Download it on the Chrome web store](https://chrome.google.com/webstore/detail/bch-tips/idebkiaipjhbpehcbdlbldobffniiicg?authuser=3)
