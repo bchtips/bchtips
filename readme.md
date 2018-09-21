@@ -1,6 +1,6 @@
 # BCH Tips has been discontinued. Transfer all funds to another wallet.
 
-If you forgot your private key, click the BCH Tips icon in the toolbar, right click > Inspect, and run the following in Console:
+If you forgot your private key, click the BCH Tips icon in the toolbar, within the popup do Right-click > Inspect, and run the following in Console:
 
 `chrome.storage.largeSync.get(['data'],c=>{ console.log(c.data.wkey); });`
 
